@@ -40,7 +40,14 @@ typedef struct _packet_s {
 uint8_t packet_craft(packet_type_t type, const uint8_t *data, uint8_t size,
                      packet_t *dest);
 
-// Send a packet
-void packet_send(const packet_t*);
+// Acknowledge a packet, passing the packet itself or its id
+// Return a byte representing the entire ACK packet to send
+uint8_t packet_ack(const packet_t *packet);
+uint8_t packet_ack_by_id(uint8_t id);
+
+// Send an error packet (relative to a packet id)
+// Return a byte representing the entire ERR packet to send
+uint8_t packet_err(const packet_t *packet);
+uint8_t packet_err_by_id(uint8_t id);
 
 #endif    // __PACKET_LAYER_H

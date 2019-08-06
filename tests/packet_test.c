@@ -27,6 +27,27 @@ static void test_params(enum PARAMS_VALIDITY_E params_are_valid,
   putchar('\n');
 }
 
+// Test a "Single-Byte Packet" (i.e. ACK or ERR)
+static void test_sbp(const packet_t *packet, enum PACKET_TYPE_E type, uint8_t expected) {
+  uint8_t (*sbp_by_id)(uint8_t)   = type == PACKET_TYPE_ACK ? packet_ack_by_id : packet_err_by_id;
+  uint8_t (*sbp)(const packet_t*) = type == PACKET_TYPE_ACK ? packet_ack : packet_err;
+  const char *type_str = type == PACKET_TYPE_ACK ? "ack" : "err";
+
+  printf("Testing packet_%s_by_id\n", type_str);
+  printf("%3s packet value: 0x%x\n", type_str, sbp_by_id(packet->header.id));
+  printf("Expected value  : 0x%x\n\n", expected);
+
+  printf("Testing packet_%s\n", type_str);
+  printf("%3s packet value: 0x%x\n", type_str, sbp(packet));
+  printf("Expected value  : 0x%x\n\n", expected);
+
+  const char *str_format = "[%s] %s function and its by-id equivalent %s return the same value\n\n";
+  if (sbp(packet) == sbp_by_id(packet->header.id))
+    printf(str_format, "PASSED", type_str, "do");
+  else
+    printf(str_format, "FAILED", type_str, "do not");
+}
+
 
 int main(int argc, const char *argv[]) {
   printf("avrtmon - Packet Interface Test Unit\n\n");
@@ -61,6 +82,13 @@ int main(int argc, const char *argv[]) {
   // Test against good parameters
   printf("\nTesting packet_craft() against good parameters\n\n");
   test_params(PARAMS_VALID, PACKET_TYPE_DAT, data, data_size, p);
+
+  // Test acknowledgement and error packets
+  // We assing a non-zero id to the packet which was previously crafted
+  // Expected values were manually calculated
+  _p.header.id = 0x03;
+  test_sbp(p, PACKET_TYPE_ACK, (uint8_t) 0x23);
+  test_sbp(p, PACKET_TYPE_ERR, (uint8_t) 0x33);
 
   return 0;
 }

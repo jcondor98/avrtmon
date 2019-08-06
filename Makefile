@@ -18,14 +18,14 @@ HEADERS = include/*
 
 # TODO: Learn to use GNU Make better to make a better GNU Make makefile :D
 test_crc:
-	gcc -Iinclude/ -o crc_test sources/crc.c tests/crc_test.c
-	./crc_test
-	rm crc_test
+	gcc -Iinclude/ -o tests/bin/crc_test sources/crc.c tests/crc_test.c
+	tests/bin/crc_test | less -F
+	rm tests/bin/crc_test
 
 test_packet:
-	gcc -Iinclude/ -DDEBUG -ggdb -o packet_test sources/{packet,crc}.c tests/packet_test.c
-	./packet_test
-	rm packet_test
+	gcc -Iinclude/ -DDEBUG -ggdb -o tests/bin/packet_test sources/{packet,crc}.c tests/packet_test.c
+	tests/bin/packet_test | less -F
+	rm tests/bin/packet_test
 
 
 # This does the magick

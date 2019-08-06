@@ -40,9 +40,26 @@ uint8_t packet_craft(packet_type_t type, const uint8_t *data, uint8_t data_size,
 }
 
 
-// Send a packet
-void packet_send(const packet_t *packet) {
-  // TODO: Implement packet_send
+// TODO: Label by-id functions as inline functions
+// Acknowledge a packet, passing the packet itself or its id
+// Returns a single byte to send to the other communication end
+uint8_t packet_ack_by_id(uint8_t id) {
+  return ((id & 0xFC) != 0) ? 0 : (PACKET_TYPE_ACK << 4) | id;
+}
+
+// Same as above, but takes a packet instead of an id
+uint8_t packet_ack(const packet_t *packet) {
+  return packet ? packet_ack_by_id(packet->header.id) : 0;
+}
+
+
+// Send an error packet (relative to a packet id)
+uint8_t packet_err_by_id(uint8_t id) {
+  return ((id & 0xFC) != 0) ? 0 : (PACKET_TYPE_ERR << 4) | id;
+}
+
+uint8_t packet_err(const packet_t *packet) {
+  return packet ? packet_err_by_id(packet->header.id) : 0;
 }
 
 
@@ -65,3 +82,13 @@ void packet_print(const packet_t *packet) {
   putchar('\n');
   printf("CRC: %ld\n\n", ((long)packet->crc)); // Support up to CRC-64
 }
+
+
+/*
+// Send a packet
+void packet_send(const packet_t *packet) {
+  // TODO: Implement packet_send
+}
+*/
+
+

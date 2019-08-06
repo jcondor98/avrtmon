@@ -19,10 +19,11 @@ typedef enum PACKET_TYPE_E {
 } packet_type_t;
 
 // Packet header type definition
+// TODO: Add a CRC (likely parity bit) to the header
 typedef struct _packet_header_s {
   packet_type_t type : 4;
-  unsigned id   : 4;
-  uint8_t  size;
+  unsigned id : 4;
+  uint8_t size;
 } packet_header_t;
 
 // Packet type definition

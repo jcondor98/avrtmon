@@ -22,6 +22,11 @@ test_crc:
 	./crc_test
 	rm crc_test
 
+test_packet:
+	gcc -Iinclude/ -DDEBUG -ggdb -o packet_test sources/{packet,crc}.c tests/packet_test.c
+	./packet_test
+	rm packet_test
+
 
 # This does the magick
 include resources/gnu-make/avr.mk

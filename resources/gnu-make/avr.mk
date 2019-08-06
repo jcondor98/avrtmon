@@ -5,7 +5,7 @@
 # set this to false to disable sonars in firmware
 CC=avr-gcc
 AS=avr-gcc
-INCLUDE_DIRS=-I. -I../avr_common
+INCLUDE_DIRS=-Iinclude/
 CC_OPTS=-Wall --std=gnu99 -DF_CPU=16000000UL -O3 -funsigned-char -funsigned-bitfields  -fshort-enums -Wall -Wstrict-prototypes -mmcu=atmega2560 $(INCLUDE_DIRS)  -D__AVR_3_BYTE_PC__
 AS_OPTS=-x assembler-with-cpp $(CC_OPTS)
 
@@ -14,6 +14,8 @@ AVRDUDE=avrdude
 # com1 = serial port. Use lpt1 to connect to parallel port.
 AVRDUDE_PORT = /dev/ttyACM0    # programmer connected to serial device
 
+# Beware of the second last line, I use ArchLinux. Locate the gemma config file
+# for your distro/installation-of-avrdude
 AVRDUDE_WRITE_FLASH = -U flash:w:$(TARGET):i
 AVRDUDE_FLAGS = -p m2560 -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROGRAMMER) -b 115200
 AVRDUDE_FLAGS += $(AVRDUDE_NO_VERIFY)

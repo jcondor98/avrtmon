@@ -18,17 +18,12 @@ typedef enum PACKET_TYPE_E {
   PACKET_TYPE_ERR = 0x03
 } packet_type_t;
 
-// Packet header type definition
-// TODO: Add a CRC (likely parity bit) to the header
-typedef struct _packet_header_s {
-  packet_type_t type : 4;
-  unsigned id : 4;
-  uint8_t size;
-} packet_header_t;
-
 // Packet type definition
+// TODO: Add a CRC (likely parity bit) to the header
 typedef struct _packet_s {
-  packet_header_t header;
+  packet_type_t type : 4;
+  unsigned id        : 4;
+  unsigned size      : 8;
   uint8_t data[PACKET_DATA_MAX_SIZE];
   crc_t crc;
 } packet_t;
@@ -49,5 +44,7 @@ uint8_t packet_ack_by_id(uint8_t id);
 // Return a byte representing the entire ERR packet to send
 uint8_t packet_err(const packet_t *packet);
 uint8_t packet_err_by_id(uint8_t id);
+
+
 
 #endif    // __PACKET_LAYER_H

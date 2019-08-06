@@ -26,9 +26,9 @@ uint8_t packet_craft(packet_type_t type, const uint8_t *data, uint8_t data_size,
   // ID of the packet to be crafted
   static uint8_t id = 0;
 
-  dest->header.type = type;
-  dest->header.id   = id;
-  dest->header.size = data_size + sizeof(packet_header_t) + sizeof(crc_t);
+  dest->type = type;
+  dest->id   = id;
+  dest->size = sizeof(packet_t) - PACKET_DATA_MAX_SIZE + data_size;
   id = (id + 1) % PACKET_ID_MAX_VAL;
 
   for (uint8_t i=0; i < data_size; ++i)
@@ -49,7 +49,7 @@ uint8_t packet_ack_by_id(uint8_t id) {
 
 // Same as above, but takes a packet instead of an id
 uint8_t packet_ack(const packet_t *packet) {
-  return packet ? packet_ack_by_id(packet->header.id) : 0;
+  return packet ? packet_ack_by_id(packet->id) : 0;
 }
 
 
@@ -59,7 +59,7 @@ uint8_t packet_err_by_id(uint8_t id) {
 }
 
 uint8_t packet_err(const packet_t *packet) {
-  return packet ? packet_err_by_id(packet->header.id) : 0;
+  return packet ? packet_err_by_id(packet->id) : 0;
 }
 
 
@@ -75,9 +75,9 @@ void packet_print(const packet_t *packet) {
          "Type: %s\n"
          "ID  : %d\n"
          "Size: %d\n",
-      type_str[packet->header.type], packet->header.id, packet->header.size);
+      type_str[packet->type], packet->id, packet->size);
 
-  for (uint8_t i=0; i < packet->header.size; ++i)
+  for (uint8_t i=0; i < packet->size; ++i)
     putchar(packet->data[i]);
   putchar('\n');
   printf("CRC: %ld\n\n", ((long)packet->crc)); // Support up to CRC-64

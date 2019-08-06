@@ -20,6 +20,7 @@ HEADERS = include/*
 test_crc:
 	gcc -Iinclude/ -o crc_test sources/crc.c tests/crc_test.c
 	./crc_test
+	rm crc_test
 
 
 # This does the magick

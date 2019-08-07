@@ -27,6 +27,11 @@ test_packet:
 	tests/bin/packet_test | less -F
 	rm tests/bin/packet_test
 
+#test_packet:
+#	gcc -Iinclude/ -DDEBUG -ggdb -o tests/bin/packet_test sources/{packet,crc}.c tests/packet_test.c
+#	gdb tests/bin/packet_test
+#	rm tests/bin/packet_test
+
 
 # This does the magick
 include resources/gnu-make/avr.mk

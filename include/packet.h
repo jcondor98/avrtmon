@@ -9,6 +9,7 @@
 // Packet hardcoded properties and parameters
 #define PACKET_ID_MAX_VAL (~(0xFF << 4))
 #define PACKET_DATA_MAX_SIZE 48
+#define PACKET_HEADER_SIZE 2
 
 // Packet types
 typedef enum PACKET_TYPE_E {
@@ -19,7 +20,6 @@ typedef enum PACKET_TYPE_E {
 } packet_type_t;
 
 // Packet type definition
-// TODO: Add a CRC (likely parity bit) to the header
 typedef struct _packet_s {
   packet_type_t type : 4;
   unsigned id        : 4;
@@ -30,23 +30,22 @@ typedef struct _packet_s {
 
 
 // Craft a packet (which is preallocated as 'dest')
-// Returns 0 if the packet is well formed (i.e. passed parameters are good), or
-// 1 otherwise
+// Returns 0 if the passed parameters are consistent, or 1 otherwise
 uint8_t packet_craft(packet_type_t type, const uint8_t *data, uint8_t size,
                      packet_t *dest);
-
-// Acknowledge a packet, passing the packet itself or its id
-// Return a byte representing the entire ACK packet to send
-uint8_t packet_ack(const packet_t *packet);
-uint8_t packet_ack_by_id(uint8_t id);
-
-// Send an error packet (relative to a packet id)
-// Return a byte representing the entire ERR packet to send
-uint8_t packet_err(const packet_t *packet);
-uint8_t packet_err_by_id(uint8_t id);
 
 // Check the integrity of DAT and CMD packets
 // Returns 0 if the packet is sane (i.e. parities and CRCs match)
 uint8_t packet_check(const packet_t *packet);
+
+// Acknowledge a packet, passing the packet itself or its id
+// Return a byte representing the entire ACK packet to send, without side effect
+uint8_t packet_ack(const packet_t *packet);
+uint8_t packet_ack_by_id(uint8_t id);
+
+// Send an error packet (relative to a packet or a packet id)
+// Return a byte representing the entire ERR packet to send, without side effect
+uint8_t packet_err(const packet_t *packet);
+uint8_t packet_err_by_id(uint8_t id);
 
 #endif    // __PACKET_LAYER_H

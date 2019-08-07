@@ -2,6 +2,7 @@
 // Packet-switched communication layer - Packet interface
 // Source file
 // Paolo Lucchesi - Sat 03 Aug 2019 12:33:20 PM CEST
+#include <assert.h>
 #include "packet.h"
 
 #ifdef DEBUG
@@ -10,7 +11,6 @@
 
 // [AUX] Check the packet header
 uint8_t packet_header_parity(const packet_t *packet);
-
 
 // Craft a packet (which is preallocated as 'dest')
 // Note that the passed data is sent 'as is', without caring about endianess
@@ -25,15 +25,21 @@ uint8_t packet_craft(packet_type_t type, const uint8_t *data, uint8_t data_size,
   // ID of the packet to be crafted
   static uint8_t id = 0;
 
+  // Initialize header
   dest->type = type;
   dest->id   = id;
-  dest->size = sizeof(packet_t) - PACKET_DATA_MAX_SIZE + data_size;
+  dest->size = PACKET_HEADER_SIZE + data_size + sizeof(crc_t);
   id = (id + 1) % PACKET_ID_MAX_VAL;
 
+  // Compute packet header parity
+  dest->header_par = 0;
+  dest->header_par = packet_header_parity(dest);
+
+  // Fill data buffer (without CRC)
   for (uint8_t i=0; i < data_size; ++i)
     dest->data[i] = data[i];
 
-  // Make the CRC assignment independent of the CRC size
+  // Assign the CRC
   crc_t *crc_p = (crc_t*)(dest->data + data_size);
   (*crc_p) = crc(dest, dest->size - sizeof(crc_t));
 
@@ -82,7 +88,7 @@ uint8_t packet_check(const packet_t *packet) {
 
 
 // [AUX] Compute the packet header parity bit
-// Returns the parity bit (1 or 0)
+// Returns the even parity bit (1 if data bits sum is odd, 0 if even)
 // Also works as a check, must return 0 (i.e. bits are even) if the packet
 // header is not corrupted by a single bit flip
 uint8_t packet_header_parity(const packet_t *packet) {
@@ -96,13 +102,23 @@ uint8_t packet_header_parity(const packet_t *packet) {
 
   // Compute parity - loop unrolled
   // NOTE: Works until the size of the header is changed
+  static_assert(PACKET_HEADER_SIZE == 2,
+      "Packet header must have size == 2 for a loop unrolled parity check");
   uint8_t bits_set = 0;
   bits_set += nibble_bitcount_tab[p[0] & 0x0F];
   bits_set += nibble_bitcount_tab[p[0] >> 4  ];
   bits_set += nibble_bitcount_tab[p[1] & 0x0F];
   bits_set += nibble_bitcount_tab[p[1] >> 4  ];
 
-  return bits_set % 2 == 0 ? 0 : 1;
+  return bits_set % 2;
+}
+
+
+// [AUX] Compute the exact size of a packet header
+uint8_t packet_header_size(const packet_t *packet) {
+  const void *p = (const void*) packet;
+  const void *p_data = (const void*)(packet->data);
+  return p_data - p;
 }
 
 

@@ -24,7 +24,7 @@ int main(int argc, const char *argv[]) {
   // Test error checking
   s[s_len] = CRC_CHECK;
   s[s_len+1] = '\0';
-  printf("Error checking %s work\n", crc_check(s, 10) ? "does not" : "does");
+  printf("Error checking does %swork\n", crc_check(s, 10) ? "not " : "");
 
   return 0;
 }

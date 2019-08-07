@@ -29,8 +29,8 @@ int main(int argc, const char *argv[]) {
   // Print dimensions of data structures
   printf("sizeof packet        -> %d bytes\n", sizeof(_p));
   printf("sizeof packet header -> %d bytes\n", (void*)(&(p->data)) - (void*)p);
-  printf("sizeof packet data   -> %d bytes\n", sizeof(_p.data));
-  printf("sizeof packet crc    -> %d bytes\n", sizeof(_p.crc));
+  printf("sizeof packet data   -> %d bytes\n", sizeof(_p.data) - sizeof(crc_t));
+  printf("sizeof crc data type -> %d bytes\n", sizeof(crc_t));
   putchar('\n');
   printf("Address of packet      -> %p\n", p);
   printf("Address of packet data -> %p\n", &(p->data));

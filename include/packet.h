@@ -25,8 +25,7 @@ typedef struct _packet_s {
   unsigned id        : 4;
   unsigned size      : 7;
   unsigned header_par: 1; // Even parity bit for the header
-  uint8_t data[PACKET_DATA_MAX_SIZE];
-  crc_t crc;
+  uint8_t data[PACKET_DATA_MAX_SIZE + sizeof(crc_t)];  // Data + trailing CRC
 } packet_t;
 
 
@@ -45,5 +44,9 @@ uint8_t packet_ack_by_id(uint8_t id);
 // Return a byte representing the entire ERR packet to send
 uint8_t packet_err(const packet_t *packet);
 uint8_t packet_err_by_id(uint8_t id);
+
+// Check the integrity of DAT and CMD packets
+// Returns 0 if the packet is sane (i.e. parities and CRCs match)
+uint8_t packet_check(const packet_t *packet);
 
 #endif    // __PACKET_LAYER_H

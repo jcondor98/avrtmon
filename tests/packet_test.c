@@ -9,7 +9,8 @@
 #include "packet.h"
 
 
-void packet_print(const packet_t *packet); // In 'sources/packet.c'
+// Inspect a packet - Source code is located in 'sources/packet.c'
+void packet_print(const packet_t *packet);
 
 // Parameterized test of 'packet_craft()'
 enum PARAMS_VALIDITY_E { PARAMS_INVALID = 0, PARAMS_VALID = 1 };

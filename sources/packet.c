@@ -8,11 +8,6 @@
 #include <stdio.h>
 #endif
 
-// Must not be changed until the packet of id 'incoming_id' is acknowledged
-// TODO: I don't think it will be useful here, shall be modified by the ISR of
-//   the AVR U(S)ART
-//static uint8_t incoming_id = 0;
-
 // Craft a packet (which is preallocated as 'dest')
 // Note that the passed data is sent 'as is', without caring about endianess
 uint8_t packet_craft(packet_type_t type, const uint8_t *data, uint8_t data_size,
@@ -34,13 +29,12 @@ uint8_t packet_craft(packet_type_t type, const uint8_t *data, uint8_t data_size,
   for (uint8_t i=0; i < data_size; ++i)
     dest->data[i] = data[i];
 
-  dest->crc = crc(dest, sizeof(dest) - sizeof(crc_t));
+  dest->crc = crc(dest, dest->size - sizeof(crc_t));
 
   return 0;
 }
 
 
-// TODO: Label by-id functions as inline functions
 // Acknowledge a packet, passing the packet itself or its id
 // Returns a single byte to send to the other communication end
 uint8_t packet_ack_by_id(uint8_t id) {
@@ -58,12 +52,14 @@ uint8_t packet_err_by_id(uint8_t id) {
   return ((id & 0xFC) != 0) ? 0 : (PACKET_TYPE_ERR << 4) | id;
 }
 
+// Send an error packet (relative to a packet_t structure)
 uint8_t packet_err(const packet_t *packet) {
   return packet ? packet_err_by_id(packet->id) : 0;
 }
 
 
 // [DEBUG] Print out a complete representation of a packet
+#ifdef DEBUG
 void packet_print(const packet_t *packet) {
   if (!packet) {
     printf("Pointer to packet is NULL\n");
@@ -80,15 +76,6 @@ void packet_print(const packet_t *packet) {
   for (uint8_t i=0; i < packet->size; ++i)
     putchar(packet->data[i]);
   putchar('\n');
-  printf("CRC: %ld\n\n", ((long)packet->crc)); // Support up to CRC-64
+  printf("CRC: %ld\n\n", (long) packet->crc); // Support up to CRC-64
 }
-
-
-/*
-// Send a packet
-void packet_send(const packet_t *packet) {
-  // TODO: Implement packet_send
-}
-*/
-
-
+#endif

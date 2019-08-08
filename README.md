@@ -56,31 +56,39 @@ Field | Size (bits) | Description
 --:|:-:|---
 type |4 | Type of the packet (see below)
 id   |4 | Packet ID
-size |8 | Size of the packet, in bytes. Notice that 8 bits are redundant
+size |7 | Size of the packet, in bytes. Notice that 7 bits are redundant
+header\_par |1 | (Even) Parity bit of the header
 
 The type of the packet can be one of the following:
 
 Type | C Macro | Code (binary) | Description
 --:|:-:|:-:|---
-Command | `CMD` | `0001` | Command sent from the PC to the tmon
 Data | `DAT` | `0000` | Data (i.e. temperatures) sent from the tmon to the PC
+Command | `CMD` | `0001` | Command sent from the PC to the tmon
 Acknowledgement | `ACK` | `0010` | Acknowledgement message
 Error | `ERR` | `0011` | Communication error (e.g. CRC mismatch)
 
-<!-- TODO: Decide what to do with packet type MSBs later (no hurry) -->
-The redundant bits (most significant ones) are reserved for future use, or might
-be used to extend the packet id field.
+The redundant bits (most significant ones) are reserved for future use, ~~ or
+might be used to extend the packet id field.~~
 
 The packet id is not unique in an entire session, as the crucial thing is to
-avoid collisions of (i.e. distinguish) successive packets.
+avoid collisions of (i.e. distinguish) successive packets. 
+In fact, I suspect that everything would work if packet ids were removed at all,
+but I think they make the code much more resilient to eventual modifications to
+the communication protocol (e.g. implementing a bulk receiving of packets).
 
-### Acknowledgement packets
+### Acknowledgement and Error packets
 
 A communication endpoint must wait for an acknowledgement message from the
 counterpart once it sent a packet in order to send a new one. 
-Acknowledgement packets are treated in a special way and do not bring any data.
-Moreover, the packet id specified in the ID header field belongs to the
-previously sent, to-be-acknowledged packet.
+Acknowledgement and error packets are treated in a special way and do not bring
+any data.
+
+First of all, both of them are byte-sized, and they transmit their packet type
+and the id of the packet which they are relative to. 
+When a DAT or CMD packet arrives, it is checked for integrity and sanity. If
+it is sane, then an ACK packet is sent; if not, then an ERR packet is sent, and
+the previously sent packet must be resent.
 
 
 <!-- The contents below are a stub, do not consider them
@@ -94,5 +102,17 @@ Field | Size (bytes) | Description
 Registering Interval | 2 | Temperature registering interval in tenths of a second
 ADC Channel | 1 | Identifies the analog pin used by the LM35
 Unit of Measure | 1 | Unit of measure of the temperature (Celsius, Kelvin ...)
+First Temperature Index | ? | Index of the first temperature inside the NVM
+Autostart | 1 | Start registering immediately after starting the tmon?
+Start Button Pin | ? | Pin and port designed for the start button
+Stop Button Pin | ? | Pin and port designed for the stop button
+
+
+TODO: Commands
+ * Download registered data
+ * Set a configuration parameter
+ * Start registering
+ * Stop registering
+ * Erase registrations
 
 -->

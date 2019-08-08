@@ -5,6 +5,7 @@
 #   and typing (do not count spaces):
 #     ESC f< cf>
 # Paolo Lucchesi - Tue 06 Aug 2019 02:27:30 AM CEST
+# TODO: Learn to use GNU Make better to make a better GNU Make makefile :D
 
 # Executable files containing the 'main' routine
 BINS = 
@@ -13,24 +14,33 @@ BINS =
 OBJECTS = 
 
 # Additional head files not included in the head directory
-HEADERS = include/*
+HEADERS = 
 
 
-# TODO: Learn to use GNU Make better to make a better GNU Make makefile :D
 test_crc:
-	gcc -Iinclude/ -o tests/bin/crc_test sources/crc.c tests/crc_test.c
-	tests/bin/crc_test | less -F
-	rm tests/bin/crc_test
+	$(call host_test,$@,sources/crc.c)
 
 test_packet:
-	gcc -Iinclude/ -DDEBUG -ggdb -o tests/bin/packet_test sources/{packet,crc}.c tests/packet_test.c
-	tests/bin/packet_test | less -F
-	rm tests/bin/packet_test
+	$(call host_test,$@,sources/packet.c sources/crc.c)
 
-#test_packet:
-#	gcc -Iinclude/ -DDEBUG -ggdb -o tests/bin/packet_test sources/{packet,crc}.c tests/packet_test.c
-#	gdb tests/bin/packet_test
-#	rm tests/bin/packet_test
+
+# Test (from the PC's OS) a module of the project
+# Tests are performed by performing:
+#   $(call host_test test_name, additional source files list)
+# The function expect to find a source file named 'tests/<test_name>.c'
+# You can also choose a test method defining the variable 'TEST_WITH' in your
+# shell. Supported option are none (i.e. execute as-is), 'gdb' and 'less'
+define host_test =
+	gcc $(INCLUDE) -DDEBUG -ggdb -o tests/bin/$(1) tests/$(1).c $(2)
+	@if   [ '$(TEST_WITH)' == ''     ]; then \
+		tests/bin/$(1);	\
+	elif [ '$(TEST_WITH)' == 'less' ]; then \
+		tests/bin/$(1) | less -F; \
+	elif [ '$(TEST_WITH)' == 'gdb'  ]; then \
+		gdb tests/bin/$(1); \
+	fi
+	rm tests/bin/$(1)
+endef
 
 
 # This does the magick

@@ -5,8 +5,8 @@
 # set this to false to disable sonars in firmware
 CC=avr-gcc
 AS=avr-gcc
-INCLUDE_DIRS=-Iinclude/
-CC_OPTS=-Wall --std=gnu99 -DF_CPU=16000000UL -O3 -funsigned-char -funsigned-bitfields  -fshort-enums -Wall -Wstrict-prototypes -mmcu=atmega2560 $(INCLUDE_DIRS)  -D__AVR_3_BYTE_PC__
+INCLUDE=-Iinclude/
+CC_OPTS=-Wall --std=gnu99 -DF_CPU=16000000UL -O3 -funsigned-char -funsigned-bitfields  -fshort-enums -Wall -Wstrict-prototypes -mmcu=atmega2560 $(INCLUDE)  -D__AVR_3_BYTE_PC__
 AS_OPTS=-x assembler-with-cpp $(CC_OPTS)
 
 AVRDUDE=avrdude

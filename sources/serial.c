@@ -1,15 +1,10 @@
 // avrtmon
 // Serial communication layer - Source file
 // Paolo Lucchesi - Fri 09 Aug 2019 07:35:01 PM CEST
-//#include <avr/io.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include <string.h>
+#include <stddef.h>
 #include "serial.h"
-
-// USART Parameters
-#define BAUD_RATE 19600
-#define UBRR_VALUE (F_CPU / 16 / BAUD_RATE - 1)
 
 // RX variables
 volatile uint8_t *rx_buffer = NULL;
@@ -37,7 +32,8 @@ void serial_init(void) {
 	UCSR0C = (1 << UCSZ01) | (1 << UCSZ00);
 
 	// Enable TX and RX (i.e. duplex communication) and RX and UDRE interrupts
-	UCSR0B = (1 << RXEN0) | (1 << TXEN0) | (1 << RXCIE0) | (1 << UDRE0);
+    // TODO: UDRIE or UDRE?
+	UCSR0B = (1 << RXEN0) | (1 << TXEN0) | (1 << RXCIE0); // | (1 << UDRIE0);
 
     // Enable global interrupts
 	sei();
@@ -53,24 +49,33 @@ void serial_init(void) {
 //        action done in that case, try later)
 //   3 -> Inconsistent arguments were passed
 uint8_t serial_send(const void *buf, uint8_t size) {
+  // Test against inconsistent parameters
   if (!buf || !size || size > TX_BUFFER_SIZE)
     return 3;
+
+  // Test against unfinished transmission
   if (tx_transmitted && tx_transmitted != tx_to_transmit)
     return 2;
 
-  serial_tx_reset();
+  // Setup for transmission
   tx_to_transmit = size;
+  tx_transmitted = 1; // First byte is sent manually with busy-waiting
   for (int i=0; i < size; ++i)
     tx_buffer[i] = ((uint8_t*) buf)[i];
 
+  // Test against TX lock
   if (tx_locked)
     return 1;
 
   // Actually send the data -- Send the first byte with busy waiting, the others
   // will be sent by the TX ISR
+  // TODO: Could deadlock happen here? If yes, how to prevent it?
   while (! (UCSR0A & (1 << UDRE0)))
-      ;
+    ;
   UDR0 = tx_buffer[0];
+
+  // Enable UDR Emptied Interrupt
+  UCSR0B |= (1 << UDRIE0);
 
   return 0;
 }
@@ -86,6 +91,7 @@ void serial_recv(volatile void *buf, uint8_t size) {
   rx_size = size;
 
   // Handle possibly starving byte in UDR0
+  // TODO: Consider dropping the waiting data
   if (starving)
     rx_buffer[rx_received++] = UDR0;
 }
@@ -134,9 +140,11 @@ ISR(USART0_RX_vect) {
 
 // TX Interrupt Service Routine
 ISR(USART0_UDRE_vect) {
+  UCSR0B &= ~(1 << UDRIE0); // Disable UDRE Interrupt
   if (tx_locked)
     tx_starving = 1;
   else if (tx_transmitted < tx_to_transmit) {
     UDR0 = tx_buffer[tx_transmitted++];
+    UCSR0B |= (1 << UDRIE0); // Enable UDRE Interrupt again
   }
 }

@@ -5,6 +5,10 @@
 #define __SERIAL_LAYER_H
 #include <stdint.h>
 
+// USART Parameters
+#define BAUD_RATE 19200
+#define UBRR_VALUE (F_CPU / 16 / BAUD_RATE - 1)
+
 
 // Initialize the USART
 void serial_init(void);
@@ -22,10 +26,10 @@ uint8_t serial_send(const void *buf, uint8_t size);
 // Receive data and store it into a buffer
 void serial_recv(volatile void *buf, uint8_t size);
 
-// Return the bytes received after the last call to 'serial_rx_reset(void)'
+// Return the number of bytes received after the last call to 'serial_rx_reset'
 uint8_t serial_rx_available(void);
 
-// Return the bytes received after the last call to 'serial_tx_reset(void)'
+// Return the number of bytes received after the last call to 'serial_tx_reset'
 uint8_t serial_tx_sent(void);
 
 // Reset indexes for receiving data from the serial

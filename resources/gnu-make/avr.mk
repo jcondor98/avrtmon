@@ -35,8 +35,8 @@ all:	$(BINS)
 %.o:	%.s 
 	$(AS) $(AS_OPTS) -c  -o $@ $<
 
-%.elf:	%.o $(OBJS)
-	$(CC) $(CC_OPTS) -o $@ $< $(OBJS) $(LIBS)
+%.elf:	%.o $(OBJECTS)
+	$(CC) $(CC_OPTS) -o $@ $< $(OBJECTS) $(LIBS)
 
 
 %.hex:	%.elf
@@ -44,6 +44,6 @@ all:	$(BINS)
 	$(AVRDUDE) $(AVRDUDE_FLAGS) -U flash:w:$@:i #$(AVRDUDE_WRITE_EEPROM) 
 
 clean:	
-	rm -rf $(OBJS) $(BINS) *.hex *~ *.o
+	rm -rf $(OBJECTS) $(BINS) *.hex *~ *.o
 
-.SECONDARY:	$(OBJS)
+.SECONDARY:	$(OBJECTS)

@@ -22,27 +22,26 @@ uint8_t serial_send(const void *buf, uint8_t size);
 // Receive data and store it into a buffer
 void serial_recv(volatile void *buf, uint8_t size);
 
-// Return the bytes received after the last call to 'serial_rx_reset()'
-uint8_t serial_rx_available();
+// Return the bytes received after the last call to 'serial_rx_reset(void)'
+uint8_t serial_rx_available(void);
 
-// Return the bytes received after the last call to 'serial_tx_reset()'
-uint8_t serial_tx_sent();
+// Return the bytes received after the last call to 'serial_tx_reset(void)'
+uint8_t serial_tx_sent(void);
 
 // Reset indexes for receiving data from the serial
-void serial_rx_reset();
+void serial_rx_reset(void);
 
 // Reset indexes for transmitting data with the serial
-void serial_tx_reset();
+void serial_tx_reset(void);
 
 // Returns 1 if *x is locked, 0 if it is not locked
-uint8_t serial_rx_islocked();
-uint8_t serial_tx_islocked();
+uint8_t serial_rx_islocked(void);
+uint8_t serial_tx_islocked(void);
 
 // Lock and Unlock TX and RX activities
-void serial_rx_lock();
-void serial_tx_lock();
-void serial_rx_unlock();
-void serial_tx_unlock();
+void serial_rx_lock(void);
+void serial_tx_lock(void);
+void serial_rx_unlock(void);
+void serial_tx_unlock(void);
 
 #endif    // __SERIAL_LAYER_H
-

@@ -2,23 +2,29 @@
 // Serial communication layer - Source file
 // Paolo Lucchesi - Fri 09 Aug 2019 07:35:01 PM CEST
 //#include <avr/io.h>
+#include <avr/io.h>
+#include <avr/interrupt.h>
 #include <string.h>
 #include "serial.h"
 
+// USART Parameters
+#define BAUD_RATE 19600
+#define UBRR_VALUE (F_CPU / 16 / BAUD_RATE - 1)
+
 // RX variables
-volatile uint8_t *rx_buffer;
-volatile uint8_t rx_received;
-volatile uint8_t rx_size;
-volatile uint8_t rx_locked;
-volatile uint8_t rx_starving;
+volatile uint8_t *rx_buffer = NULL;
+volatile uint8_t rx_received = 0;
+volatile uint8_t rx_size = 0;
+volatile uint8_t rx_locked = 0;
+volatile uint8_t rx_starving = 0;
 
 // TX variables
 #define TX_BUFFER_SIZE 64
 volatile uint8_t tx_buffer[TX_BUFFER_SIZE]; // TODO: Resize to packet size
-volatile uint8_t tx_to_transmit;
-volatile uint8_t tx_transmitted;
-volatile uint8_t tx_locked;
-volatile uint8_t tx_starving;
+volatile uint8_t tx_to_transmit = 0;
+volatile uint8_t tx_transmitted = 0;
+volatile uint8_t tx_locked = 0;
+volatile uint8_t tx_starving = 0;
 
 
 // Initialize the USART
@@ -30,8 +36,8 @@ void serial_init(void) {
 	// Set the communication frame width (8 bits for us)
 	UCSR0C = (1 << UCSZ01) | (1 << UCSZ00);
 
-	// Enable TX and RX (i.e. duplex communication)
-	UCSR0B = (1 << RXEN0) | (1 << TXEN0) | (1 << RXCIE0);
+	// Enable TX and RX (i.e. duplex communication) and RX and UDRE interrupts
+	UCSR0B = (1 << RXEN0) | (1 << TXEN0) | (1 << RXCIE0) | (1 << UDRE0);
 
     // Enable global interrupts
 	sei();
@@ -51,16 +57,20 @@ uint8_t serial_send(const void *buf, uint8_t size) {
     return 3;
   if (tx_transmitted && tx_transmitted != tx_to_transmit)
     return 2;
+
+  serial_tx_reset();
+  tx_to_transmit = size;
+  for (int i=0; i < size; ++i)
+    tx_buffer[i] = ((uint8_t*) buf)[i];
+
   if (tx_locked)
     return 1;
-
-  memcpy(tx_buffer, buf, size);
 
   // Actually send the data -- Send the first byte with busy waiting, the others
   // will be sent by the TX ISR
   while (! (UCSR0A & (1 << UDRE0)))
       ;
-  UDR0 = c;
+  UDR0 = tx_buffer[0];
 
   return 0;
 }
@@ -68,56 +78,65 @@ uint8_t serial_send(const void *buf, uint8_t size) {
 // Receive data and store it into a buffer
 void serial_recv(volatile void *buf, uint8_t size) {
   if (!buf) return;
+  uint8_t starving = rx_starving;
+
+  // Setup for receiving
   serial_rx_reset();
   rx_buffer = buf;
+  rx_size = size;
+
+  // Handle possibly starving byte in UDR0
+  if (starving)
+    rx_buffer[rx_received++] = UDR0;
 }
 
 // Return the bytes received after the last call to 'serial_rx_reset()'
-uint8_t serial_rx_available() {
+uint8_t serial_rx_available(void) {
   return rx_received;
 }
 
 // Return the bytes received after the last call to 'serial_tx_reset()'
-uint8_t serial_tx_sent() {
+uint8_t serial_tx_sent(void) {
   return tx_transmitted;
 }
 
 // Reset indexes for receiving data from the serial
-void serial_rx_reset() {
+void serial_rx_reset(void) {
   rx_buffer = NULL;
   rx_received = 0;
 }
 
 
 // Reset indexes for transmitting data with the serial
-void serial_tx_reset() {
+void serial_tx_reset(void) {
   tx_to_transmit = 0;
   tx_transmitted = 0;
 }
 
 // Returns 1 if *x is locked, 0 if it is not locked
-uint8_t serial_rx_islocked() { return rx_locked; }
-uint8_t serial_tx_islocked() { return tx_locked; }
+uint8_t serial_rx_islocked(void) { return rx_locked; }
+uint8_t serial_tx_islocked(void) { return tx_locked; }
 
 // Lock and Unlock TX and RX activities
-void serial_rx_lock() { rx_locked = 1; }
-void serial_tx_lock() { tx_locked = 1; }
-void serial_rx_unlock() { rx_locked = 0; }
-void serial_tx_unlock() { tx_locked = 0; }
+void serial_rx_lock(void) { rx_locked = 1; }
+void serial_tx_lock(void) { tx_locked = 1; }
+void serial_rx_unlock(void) { rx_locked = 0; }
+void serial_tx_unlock(void) { tx_locked = 0; }
 
 // RX Interrupt Service Routine
 ISR(USART0_RX_vect) {
-  if (rx_locked)
+  if (rx_locked || rx_received >= rx_size)
     rx_starving = 1;
-  else if (rx_received < rx_size)
+  else
     rx_buffer[rx_received++] = UDR0;
 }
 
 
 // TX Interrupt Service Routine
-ISR(USART0_TX_vect) {
+ISR(USART0_UDRE_vect) {
   if (tx_locked)
     tx_starving = 1;
-  else if (tx_transmitted < tx_to_transmit)
+  else if (tx_transmitted < tx_to_transmit) {
     UDR0 = tx_buffer[tx_transmitted++];
+  }
 }

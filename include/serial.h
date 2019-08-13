@@ -13,18 +13,17 @@
 // Initialize the USART
 void serial_init(void);
 
+// Receive data and store it into a buffer
+void serial_rx(volatile void *buf, uint8_t size);
+
 // Send data stored in a buffer
 // The data will be copied into another buffer, so it can be reused immediately
 // Returns:
 //   0 -> Success, data has been loaded and the first byte was already sent
-//   1 -> TX is locked, but data has been loaded anyway
+//   1 -> Inconsistent arguments were passed
 //   2 -> The data of the previous call has not been sent entirely yet (no
 //        action done in that case, try later)
-//   3 -> Inconsistent arguments were passed
-uint8_t serial_send(const void *buf, uint8_t size);
-
-// Receive data and store it into a buffer
-void serial_recv(volatile void *buf, uint8_t size);
+uint8_t serial_tx(const void *buf, uint8_t size);
 
 // Return the number of bytes received after the last call to 'serial_rx_reset'
 uint8_t serial_rx_available(void);
@@ -38,14 +37,8 @@ void serial_rx_reset(void);
 // Reset indexes for transmitting data with the serial
 void serial_tx_reset(void);
 
-// Returns 1 if *x is locked, 0 if it is not locked
-uint8_t serial_rx_islocked(void);
-uint8_t serial_tx_islocked(void);
-
-// Lock and Unlock TX and RX activities
-void serial_rx_lock(void);
-void serial_tx_lock(void);
-void serial_rx_unlock(void);
-void serial_tx_unlock(void);
+// Return 1 if *x is ongoing, 0 otherwise
+uint8_t serial_rx_ongoing(void);
+uint8_t serial_tx_ongoing(void);
 
 #endif    // __SERIAL_LAYER_H

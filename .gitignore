@@ -1,3 +1,5 @@
+objects/*/*
+!objects/*/.gitkeep
 tests/bin/*
 resources/todo.txt
 limbo/

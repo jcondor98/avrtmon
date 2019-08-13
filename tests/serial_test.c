@@ -19,23 +19,19 @@ int main(int argc, const char *argv[]) {
   DDRB |= (1 << 7);
   while (1) {
     PORTB ^= (1 << 7);
-    serial_tx_lock();
-    serial_rx_unlock();
-    serial_recv(buf_rx, 8);
+    serial_rx(buf_rx, 8);
 
-    while (serial_rx_available() != 8)
+    while (serial_rx_ongoing())
       ;
-
-    serial_rx_lock();
 
     PORTB ^= (1 << 7);
     for (int i=0; i < 8; ++i)
       buf_tx[i] = chars[(buf_rx[i] - 0x61) % 24];
 
-    serial_tx_unlock();
-    serial_send(buf_tx, 8);
+    serial_tx(buf_tx, 8);
 
-    while (serial_tx_sent() != 8) ;
+    while (serial_tx_ongoing())
+      ;
   }
 }
 

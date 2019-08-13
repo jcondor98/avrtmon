@@ -17,30 +17,33 @@ OBJECTS = sources/serial.o
 HEADERS = 
 
 
-#test_crc:
-#	$(call host_test,$@,sources/crc.c)
-#
-#test_packet:
-#	$(call host_test,$@,sources/packet.c sources/crc.c)
-#
-#
-## Test (from the PC's OS) a module of the project
-## Tests are performed by performing:
-##   $(call host_test test_name, additional source files list)
-## The function expect to find a source file named 'tests/<test_name>.c'
-## You can also choose a test method defining the variable 'TEST_WITH' in your
-## shell. Supported option are none (i.e. execute as-is), 'gdb' and 'less'
-#define host_test =
-#	gcc $(INCLUDE) -DDEBUG -ggdb -o tests/bin/$(1) tests/$(1).c $(2)
-#	@if   [ '$(TEST_WITH)' == ''     ]; then \
-#		tests/bin/$(1);	\
-#	elif [ '$(TEST_WITH)' == 'less' ]; then \
-#		tests/bin/$(1) | less -F; \
-#	elif [ '$(TEST_WITH)' == 'gdb'  ]; then \
-#		gdb tests/bin/$(1); \
-#	fi
-#	rm tests/bin/$(1)
-#endef
+test_crc:
+	$(call host_test,$@,sources/crc.c)
+
+test_packet:
+	$(call host_test,$@,sources/packet.c sources/crc.c)
+
+test_serial: tests/serial_test.hex
+	# TODO: Write an automated test for host-side
+
+
+# Test (from the PC's OS) a module of the project
+# Tests are performed by performing:
+#   $(call host_test test_name, additional source files list)
+# The function expect to find a source file named 'tests/<test_name>.c'
+# You can also choose a test method defining the variable 'TEST_WITH' in your
+# shell. Supported option are none (i.e. execute as-is), 'gdb' and 'less'
+define host_test =
+	gcc $(INCLUDE) -DDEBUG -ggdb -o tests/bin/$(1) tests/$(1).c $(2)
+	@if   [ '$(TEST_WITH)' == ''     ]; then \
+		tests/bin/$(1);	\
+	elif [ '$(TEST_WITH)' == 'less' ]; then \
+		tests/bin/$(1) | less -F; \
+	elif [ '$(TEST_WITH)' == 'gdb'  ]; then \
+		gdb tests/bin/$(1); \
+	fi
+	rm tests/bin/$(1)
+endef
 
 
 # This does the magick

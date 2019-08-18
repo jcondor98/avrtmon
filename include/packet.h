@@ -7,8 +7,9 @@
 #include "crc.h"
 
 // Packet hardcoded properties and parameters
+// TODO: Choose a proper, sensible max size for the packet data
 #define PACKET_ID_MAX_VAL (~(0xFF << 4))
-#define PACKET_DATA_MAX_SIZE 48
+#define PACKET_DATA_MAX_SIZE 24
 #define PACKET_HEADER_SIZE 2
 
 // Packet types

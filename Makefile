@@ -25,7 +25,7 @@ test_packet:
 
 test_serial: tests/serial_test.hex
 	# TODO: Write an automated test for host-side
-
+	# TODO: Provide also 'serial.o' object file
 
 # Test (from the PC's OS) a module of the project
 # Tests are performed by performing:

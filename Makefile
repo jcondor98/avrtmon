@@ -23,6 +23,9 @@ test_crc:
 test_packet:
 	$(call host_test,$@,sources/packet.c sources/crc.c)
 
+test_temperature:
+	$(call host_test,$@,sources/temperature.c tests/mock_nvm.c)
+
 test_serial: tests/serial_test.hex
 	# TODO: Write an automated test for host-side
 	# TODO: Provide also 'serial.o' object file
@@ -34,8 +37,8 @@ test_serial: tests/serial_test.hex
 # You can also choose a test method defining the variable 'TEST_WITH' in your
 # shell. Supported option are none (i.e. execute as-is), 'gdb' and 'less'
 define host_test =
-	gcc $(INCLUDE) -DDEBUG -ggdb -o tests/bin/$(1) tests/$(1).c $(2)
-	@if   [ '$(TEST_WITH)' == ''     ]; then \
+	gcc -DTEST -Itests/include $(INCLUDE) -DDEBUG -ggdb -o tests/bin/$(1) tests/$(1).c $(2)
+	@if  [ '$(TEST_WITH)' == ''     ]; then \
 		tests/bin/$(1);	\
 	elif [ '$(TEST_WITH)' == 'less' ]; then \
 		tests/bin/$(1) | less -F; \

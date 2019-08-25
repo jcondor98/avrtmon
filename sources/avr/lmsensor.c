@@ -57,9 +57,3 @@ uint16_t lm_getresult(void) {
   adc_available = 0; // Last result will be returned anyway
   return adc_result;
 }
-
-// Get the last registered temperature (in Celsius)
-// Note that side-effects expected by 'lm_getresult' will happen
-float lm_getresult_celsius(void) {
-  return ((float) lm_getresult()) / 10.0f;
-}

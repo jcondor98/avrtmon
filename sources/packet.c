@@ -2,10 +2,9 @@
 // Packet-switched communication layer - Packet interface
 // Source file
 // Paolo Lucchesi - Sat 03 Aug 2019 12:33:20 PM CEST
-#include <assert.h>
 #include "packet.h"
 
-#ifdef DEBUG
+#ifdef TEST
 #include <stdio.h>
 #endif
 
@@ -102,8 +101,9 @@ uint8_t packet_header_parity(const packet_t *packet) {
 
   // Compute parity - loop unrolled
   // NOTE: Works until the size of the header is changed
-  static_assert(PACKET_HEADER_SIZE == 2,
-      "Packet header must have size == 2 for a loop unrolled parity check");
+#if PACKET_HEADER_SIZE != 2
+#error "Packet header must have size == 2 for a loop unrolled parity check"
+#endif
   uint8_t bits_set = 0;
   bits_set += nibble_bitcount_tab[p[0] & 0x0F];
   bits_set += nibble_bitcount_tab[p[0] >> 4  ];
@@ -123,8 +123,8 @@ uint8_t packet_header_size(const packet_t *packet) {
 
 
 
-// [DEBUG] Print out a complete representation of a packet
-#ifdef DEBUG
+// [TEST] Print out a complete representation of a packet
+#ifdef TEST
 void packet_print(const packet_t *packet) {
   if (!packet) {
     printf("Pointer to packet is NULL\n");

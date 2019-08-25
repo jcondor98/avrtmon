@@ -21,7 +21,4 @@ uint8_t lm_available(void);
 // Get the last registered temperature (as a raw tension converted by the ADC)
 uint16_t lm_getresult(void);
 
-// Get the last registered temperature (in Celsius)
-float lm_getresult_celsius(void);
-
 #endif    // __LM_SENSON_LAYER_H

@@ -2,16 +2,9 @@
 // Temperature database - Head file
 // Paolo Lucchesi - Test Unit
 #include <stdio.h>
+#include "test_framework.h"
+
 #include "temperature.h"
-
-
-// Test an expression which can be evaluated as true/false
-// Returns 1 if the expression is evaluated as true, 0 otherwise
-// Conceptually, a test passes if 'expr' is true
-static int test_expr(int expr, const char *assertion) {
-  printf("[%s] %s\n", expr ? "PASSED" : "FAILED", assertion);
-  return expr ? 1 : 0;
-}
 
 
 int main(int argc, const char *argv[]) {
@@ -31,7 +24,7 @@ int main(int argc, const char *argv[]) {
 
   mock_nvm_init_for_temperature_db();
   temperature_init(); // Initialize DB module
-  test_expr(temperature_count() == 0, "DB should be empty");
+  test_expr(temperature_count() == 0, "DB should be initially empty");
   putchar('\n');
 
 
@@ -40,36 +33,40 @@ int main(int argc, const char *argv[]) {
     // Works until temperature_t becomes a data structure
     ret = temperature_register((temperature_t) i);
     test_expr(temperature_count() == i+1,
-        "DB item count should be consistent");
+        "DB item count should be consistent at iteration %d", i);
   }
 
   // Try to register another temperature (attempt should fail)
   ret = temperature_register((temperature_t) 123);
-  test_expr(ret != 0, "Function call should not be successful");
+  test_expr(ret != 0, "DB item should not be registered with no space left");
   test_expr(temperature_count() == TEMP_DB_CAPACITY,
-      "DB item count should not change");
+      "DB item count should not become bigger than its capacity");
 
 
   printf("\nTesting temperature_get routine\n");
   for (id_t i=0; i < TEMP_DB_CAPACITY; ++i) {  // Navigate across the entire DB
     temperature_t t;
     ret = temperature_get(i, &t);
-    test_expr(ret == 0, "Function call should be successful");
-    test_expr(t == ((temperature_t) i), "Temperature should equal its ID");
+
+    test_expr(ret == 0,
+        "temperature_get() should be successful at iteration %d", i);
+    test_expr(t == ((temperature_t) i),
+        "Temperature should equal its ID (%d)", i);
   }
 
 
   printf("\nTesting temperature_fetch_entire_db routine\n");
   temperature_fetch_entire_db(&local_db);
   test_expr(local_db.used == temperature_count(),
-      "'used' field should be consistent");
+      "'used' field of the fetched DB should be consistent");
   test_expr(local_db.capacity == temperature_capacity(),
-      "'capacity' field should be consistent");
+      "'capacity' field of the fetched DB should be consistent");
 
   for (id_t i=0; i < TEMP_DB_CAPACITY; ++i) {
     temperature_t t;
     temperature_get(i, &t);
-    test_expr(local_db.items[i] == t, "Temperature should be consistent");
+    test_expr(local_db.items[i] == t,
+        "Temperature of id %d should be consistent in the fetched DB", i);
   }
 
 
@@ -77,6 +74,6 @@ int main(int argc, const char *argv[]) {
   temperature_db_reset();
   test_expr(temperature_count() == 0, "DB should have been emptied");
 
-
+  test_summary();
   return 0;
 }

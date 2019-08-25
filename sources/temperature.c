@@ -10,11 +10,6 @@
 #define NVM_ADDR_FIELD(field) \
   ((void*)(TEMP_DB_OFFSET + offsetof(temperature_db_t, field)))
 
-
-// Get the address of the 'used' field of the DB in the NVM
-//#define NVM_ADDR_FIELD(used) \
-//  ((void*)(TEMP_DB_OFFSET + offsetof(temperature_db_t, used)))
-
 // Get the address of a single temperature, given its ID, in the NVM
 #define NVM_ADDR_ITEM(id) \
   ((void*)(TEMP_DB_OFFSET + offsetof(temperature_db_t, items) + \

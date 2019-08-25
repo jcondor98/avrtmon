@@ -10,8 +10,8 @@
 #include "lmsensor.h"
 #include "serial.h"
 
-#define D13_MASK (1 << 7)
 
+#define D13_MASK (1 << 7)
 
 int main(int argc, const char *argv[]) {
   lm_init();

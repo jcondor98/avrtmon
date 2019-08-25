@@ -3,7 +3,10 @@
 // Paolo Lucchesi - Mon 05 Aug 2019 03:55:51 AM CEST
 #include <stdio.h>
 #include <string.h>
+#include "test_framework.h"
+
 #include "crc.h"
+
 
 int main(int argc, const char *argv[]) {
   // Print informations about the CRC algorithm
@@ -14,17 +17,22 @@ int main(int argc, const char *argv[]) {
          CRC_NAME, CRC_POLY, CRC_INIT);
 
   // Leave room for trailing CRC (needed later)
-  char s[12] = "123456789";
+  char s[] = "123456789";
   size_t s_len = strlen(s);
 
   // Test CRC computation
+  crc_t computed_crc = crc(s, s_len);
+  test_expr(computed_crc == CRC_CHECK, "CRC should match the expected one");
   printf("String  : %s\nCRC     : 0x%x\nExpected: 0x%x\n\n",
          s, crc(s, s_len), CRC_CHECK);
 
   // Test error checking
   s[s_len] = CRC_CHECK;
   s[s_len+1] = '\0';
-  printf("Error checking does %swork\n", crc_check(s, 10) ? "not " : "");
+  crc_t crc_check_result = crc_check(s, s_len + 1);
+  test_expr(crc_check_result == 0,
+      "Error checking should work (crc_check returned %d)", crc_check_result);
 
+  test_summary();
   return 0;
 }

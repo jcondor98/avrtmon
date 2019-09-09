@@ -1,7 +1,6 @@
 // avrtmon
 // Test Framework - Source file
 // Paolo Lucchesi - Sat 24 Aug 2019 07:16:02 PM CEST
-#include <stdio.h>
 #include "test_framework.h"
 
 // Register passed and failed tests

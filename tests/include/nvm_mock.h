@@ -5,7 +5,15 @@
 #define __NVM_INTERFACE_H
 
 #define NVM_SIZE 16
+#define NVM_LIMIT ((void*)NVM_SIZE)
 
+// EEMEM expands to nothing
+#define NVMMEM
+
+// Perform a generic initialization of the NVM with a buffer given by the user
+void mock_nvm_init(const void *src, size_t size);
+
+// TODO: Remove this
 void mock_nvm_init_for_temperature_db(void);
 
 void nvm_read(void *dest, const void *src, size_t size);

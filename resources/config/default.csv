@@ -1,0 +1,4 @@
+lm_channel,uint8_t,0
+lm_interval,uint16_t,0
+start_pin,uint8_t,0
+stop_pin,uint8_t,0

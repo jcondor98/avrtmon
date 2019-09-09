@@ -39,7 +39,6 @@ OBJECTS :=
 
 
 # Objects and binaries recipes
-#%.o:	$(OBJDIR)/%.o	;  # Do NOT use this inside the makefile
 
 $(OBJDIR)/%.o:	%.c 
 	$(CC) $(CFLAGS) -c -o $@ $<
@@ -68,6 +67,12 @@ test_packet: $(addprefix $(OBJDIR)/, crc.o packet.o)
 test_temperature:
 	$(call host_test, $(SRCDIR)/temperature.c tests/mock_nvm.c)
 
+test_config:
+	$(RESDIR)/bin/config-gen -c $(RESDIR)/config/test.csv -S tests/config.c \
+	  -H tests/include/config.h
+	$(call host_test, tests/config.c tests/mock_nvm.c)
+	rm tests/{config.c,include/config.h}
+
 test_serial: tests/serial_test.hex
 	# TODO: Write an automated test for host-side
 	# TODO: Provide also 'serial.o' object file
@@ -79,5 +84,6 @@ test_serial: tests/serial_test.hex
 all: clean # TODO: Set this when it's time
 
 clean:	
-	rm -f $(OBJDIR)/../{avr,host}/* $(BINS) tests/bin/*
+	rm -f $(OBJDIR)/../{avr,host}/* $(BINS) tests/bin/* sources/config.c \
+	  include/config.h tests/{config.c,include/config.h}
 

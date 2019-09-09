@@ -1,0 +1,137 @@
+#!/bin/sh
+# avrtmon - Configuration generator
+# This script generates and takes care of the tmon configuration, without
+# leaving to the programmer painful operation when modifying or updating it
+# The script takes a CSV file in the form:
+#       field,c_type,default_value
+# e.g.: version,uint8_t,1
+# NOTE: This file is expected to be located in 'resources/bin', relative to the
+#   main project directory
+# NOTE: The only non-POSIX feature used here is the -i option for sed
+set -e
+
+# Error exit - $1 is the exit code, $2 a message to be displayed
+function exit_error {
+  [ -n "$2" ] && echo "Error: $2"
+
+  cat << EOF
+Usage: $(basename $0) <-c csv_config> [...]
+  -c file  ->  CSV config file
+  -s file  ->  Source template
+  -h file  ->  Header template
+  -S file  ->  Source output
+  -H file  ->  Header output
+  -d file  ->  Base directory
+  -t string ->  TAB character in the source code
+EOF
+
+  [ -n "$1" ] && exit $1 || exit 1
+}
+
+
+# Generate a 8-character random string
+alias randstr-8ch="cat /dev/urandom | tr -dc 'a-zA-Z' | fold -w 8 | head -n 1"
+
+# Handle command line arguments
+# -s -> Source template
+# -h -> Header template
+# -S -> Source output
+# -H -> Header output
+# -c -> CSV config file
+# -d -> Base directory
+# -t -> TAB character in the source code
+while getopts 's:h:n:S:H:N:c:d:t:' opt; do
+  case $opt in
+    s) SOURCE_TEMPLATE="$OPTARG" ;;
+    h) HEADER_TEMPLATE="$OPTARG" ;;
+    S) SOURCE_OUT="$OPTARG" ;;
+    H) HEADER_OUT="$OPTARG" ;;
+    c) CSV_IN="$OPTARG" ;;
+    d) BASEDIR="$OPTARG" ;;
+    t) TAB="$OPTARG" ;;
+    ?) exit_error "Unrecognised option: -$opt" ;;
+  esac
+done
+
+
+# Default paramters parameters
+[ -z "$BASEDIR" ] &&
+  BASEDIR="$(readlink -f $(dirname $0)/../..)"
+[ -z "$SOURCE_OUT" ] &&
+  SOURCE_OUT="${BASEDIR}/sources/config.c"
+[ -z "$HEADER_OUT" ] &&
+  HEADER_OUT="${BASEDIR}/include/config.h"
+[ -z "$SOURCE_TEMPLATE" ] &&
+  SOURCE_TEMPLATE="${BASEDIR}/sources/templates/config-template.c"
+[ -z "$HEADER_TEMPLATE" ] &&
+  HEADER_TEMPLATE="${BASEDIR}/include/templates/config-template.h"
+[ -z "$TAB" ] &&
+  TAB="  "
+
+CTYPE_SUBSTITUTE_FLAG="CTYPE-SUBST-HERE"
+FIELD_ENUM_SUBSTITUTE_FLAG="FIELD-ENUM-SUBST-HERE"
+FIELD_COUNT_SUBSTITUTE_FLAG="FIELD-COUNT-SUBST-HERE"
+FIELD_MOD_SUBSTITUTE_FLAG="FIELD-SIZE-SUBST-HERE"
+FIELD_NVM_SUBSTITUTE_FLAG="FIELD-NVM-SUBST-HERE"
+
+
+# Check for the existence of the parameters
+for f in $SOURCE_TEMPLATE $HEADER_TEMPLATE; do
+  [ ! -e "$f" ] && exit_error 1 "File not found: $f"
+done
+
+# Handle the first argument as the input CSV configuration file
+[ ! -e "$CSV_IN" ] && exit_error 1 "CSV file not found"
+
+# Use a temporary file for the configuration C type definition and for recording
+# the ID and size of each field
+TMPDIR="/tmp/avrtmon-config-$(randstr-8ch)"
+mkdir "$TMPDIR"
+
+CTYPE_TMP_FILE="${TMPDIR}/avrtmon_config_ctype.tmp"
+FIELD_ENUM_TMP_FILE="${TMPDIR}/avrtmon_config_meta.tmp"
+FIELD_MOD_TMP_FILE="${TMPDIR}/avrtmon_config_mod.tmp"
+FIELD_NVM_TMP_FILE="${TMPDIR}/avrtmon_config_nvm.tmp"
+
+
+# Register field information in the temporary files
+field_count=0
+while IFS=',' read cfg_field cfg_type cfg_default; do
+  echo "${TAB}${cfg_type} ${cfg_field};" >> $CTYPE_TMP_FILE
+  echo "${TAB}CFG_$(echo $cfg_field | tr '[:lower:]' '[:upper:]')," \
+    >> $FIELD_ENUM_TMP_FILE
+  echo "${TAB}{ .size = sizeof(${cfg_type}), .offset = offsetof(config_t, ${cfg_field}) }," \
+    >> $FIELD_MOD_TMP_FILE
+  echo "${TAB}.${cfg_field} = ${cfg_default}," >> $FIELD_NVM_TMP_FILE
+  let '++field_count'
+done < "$CSV_IN"
+
+# Remove last commas from the temporary files
+sed '$ { s/,// }'     -i $FIELD_ENUM_TMP_FILE
+sed '$ { s/,// }'     -i $FIELD_NVM_TMP_FILE
+sed '$ { s/\},/\}/ }' -i $FIELD_MOD_TMP_FILE
+
+
+# Merge the temporary files and the templates
+# Configuration fields definition and IDs
+sed -e "/\/\/$CTYPE_SUBSTITUTE_FLAG/ {
+r $CTYPE_TMP_FILE
+D
+}"  -e "/\/\/$FIELD_ENUM_SUBSTITUTE_FLAG/ {
+r $FIELD_ENUM_TMP_FILE
+D
+}"  -e "/\/\/$FIELD_COUNT_SUBSTITUTE_FLAG/ {
+s/^.*$/#define CONFIG_FIELD_COUNT $field_count/
+}" < "$HEADER_TEMPLATE" > "$HEADER_OUT"
+
+# Configuration fields accessors
+sed -e "/\/\/$FIELD_MOD_SUBSTITUTE_FLAG/ {
+r $FIELD_MOD_TMP_FILE
+D
+}"  -e "/\/\/$FIELD_NVM_SUBSTITUTE_FLAG/ {
+r $FIELD_NVM_TMP_FILE
+D
+}" < "$SOURCE_TEMPLATE" > "$SOURCE_OUT"
+
+
+rm -r "$TMPDIR"

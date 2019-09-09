@@ -8,12 +8,12 @@
 
 // Get the address of an arbitrary field in an NVM, passing the field name
 #define NVM_ADDR_FIELD(field) \
-  ((void*)(TEMP_DB_OFFSET + offsetof(temperature_db_t, field)))
+  (((void*)&nvm_db) + offsetof(temperature_db_t, field))
 
 // Get the address of a single temperature, given its ID, in the NVM
 #define NVM_ADDR_ITEM(id) \
-  ((void*)(TEMP_DB_OFFSET + offsetof(temperature_db_t, items) + \
-   ((id) * sizeof(temperature_t))))
+  ((((void*)&nvm_db) + offsetof(temperature_db_t, items)) +\
+   ((id) * sizeof(temperature_t)))
 
 
 // Get the 'used' field of the temperature
@@ -25,6 +25,9 @@ static inline id_t _db_get_capacity(void);
 // Fetch the entire database from the NVM
 static void _temperature_fetch_entire_db_from_nvm(temperature_db_t *dest_db);
 
+
+// Permanent database in the NVM
+temperature_db_t NVMMEM nvm_db;
 
 // Database Cache in memory
 #ifdef TEMP_DB_CACHE
@@ -60,7 +63,6 @@ uint8_t temperature_register(uint16_t raw_val) {
   t = &_t;
 #endif
 
-  // TODO: Make this resilient to a change of the temperature_t type
   memcpy(t, &raw_val, sizeof(temperature_t));
 
   // Effectively register the temperature

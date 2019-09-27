@@ -19,8 +19,10 @@ Usage: $(basename $0) <-c csv_config> [...]
   -c file  ->  CSV config file
   -s file  ->  Source template
   -h file  ->  Header template
+  -n file  ->  NVM image template
   -S file  ->  Source output
   -H file  ->  Header output
+  -N file  ->  NVM image output
   -d file  ->  Base directory
   -t string ->  TAB character in the source code
 EOF
@@ -44,8 +46,10 @@ while getopts 's:h:n:S:H:N:c:d:t:' opt; do
   case $opt in
     s) SOURCE_TEMPLATE="$OPTARG" ;;
     h) HEADER_TEMPLATE="$OPTARG" ;;
+    n) NVM_TEMPLATE="$OPTARG" ;;
     S) SOURCE_OUT="$OPTARG" ;;
     H) HEADER_OUT="$OPTARG" ;;
+    N) NVM_OUT="$OPTARG" ;;
     c) CSV_IN="$OPTARG" ;;
     d) BASEDIR="$OPTARG" ;;
     t) TAB="$OPTARG" ;;
@@ -61,10 +65,14 @@ done
   SOURCE_OUT="${BASEDIR}/sources/config.c"
 [ -z "$HEADER_OUT" ] &&
   HEADER_OUT="${BASEDIR}/include/config.h"
+[ -z "$NVM_OUT" ] &&
+  NVM_OUT="${BASEDIR}/sources/nvm.c"
 [ -z "$SOURCE_TEMPLATE" ] &&
   SOURCE_TEMPLATE="${BASEDIR}/sources/templates/config-template.c"
 [ -z "$HEADER_TEMPLATE" ] &&
   HEADER_TEMPLATE="${BASEDIR}/include/templates/config-template.h"
+[ -z "$NVM_TEMPLATE" ] &&
+  NVM_TEMPLATE="${BASEDIR}/sources/templates/nvm-template.c"
 [ -z "$TAB" ] &&
   TAB="  "
 
@@ -76,7 +84,7 @@ FIELD_NVM_SUBSTITUTE_FLAG="FIELD-NVM-SUBST-HERE"
 
 
 # Check for the existence of the parameters
-for f in $SOURCE_TEMPLATE $HEADER_TEMPLATE; do
+for f in $SOURCE_TEMPLATE $HEADER_TEMPLATE $NVM_TEMPLATE; do
   [ ! -e "$f" ] && exit_error 1 "File not found: $f"
 done
 
@@ -102,7 +110,7 @@ while IFS=',' read cfg_field cfg_type cfg_default; do
     >> $FIELD_ENUM_TMP_FILE
   echo "${TAB}{ .size = sizeof(${cfg_type}), .offset = offsetof(config_t, ${cfg_field}) }," \
     >> $FIELD_MOD_TMP_FILE
-  echo "${TAB}.${cfg_field} = ${cfg_default}," >> $FIELD_NVM_TMP_FILE
+  echo "${TAB}${TAB}.${cfg_field} = ${cfg_default}," >> $FIELD_NVM_TMP_FILE
   let '++field_count'
 done < "$CSV_IN"
 
@@ -128,10 +136,12 @@ s/^.*$/#define CONFIG_FIELD_COUNT $field_count/
 sed -e "/\/\/$FIELD_MOD_SUBSTITUTE_FLAG/ {
 r $FIELD_MOD_TMP_FILE
 D
-}"  -e "/\/\/$FIELD_NVM_SUBSTITUTE_FLAG/ {
-r $FIELD_NVM_TMP_FILE
-D
 }" < "$SOURCE_TEMPLATE" > "$SOURCE_OUT"
 
+# NVM image
+sed -e "/\/\/$FIELD_NVM_SUBSTITUTE_FLAG/ {
+r $FIELD_NVM_TMP_FILE
+D
+}" < "$NVM_TEMPLATE" > "$NVM_OUT"
 
 rm -r "$TMPDIR"

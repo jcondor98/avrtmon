@@ -50,6 +50,11 @@ $(OBJDIR)/%.o:	%.s
 .PRECIOUS: $(OBJDIR)/%.o
 
 
+# Generate the configuration sources
+config_gen:
+	resources/bin/config-gen -c resources/config/default.csv
+
+
 # Test (from the PC's OS) a module of the project
 # Tests are done by performing:
 #   $(call host_test [additional compiler args])
@@ -65,7 +70,7 @@ test_packet: $(addprefix $(OBJDIR)/, crc.o packet.o)
 	$(call host_test)
 
 test_temperature:
-	$(call host_test, $(SRCDIR)/temperature.c tests/mock_nvm.c)
+	$(call host_test, $(SRCDIR)/temperature.c tests/mock_nvm.c sources/nvm.c)
 
 test_config:
 	$(RESDIR)/bin/config-gen -c $(RESDIR)/config/test.csv -S tests/config.c \
@@ -79,7 +84,7 @@ test_serial: tests/serial_test.hex
 
 
 # Standard make PHONY rules
-.PHONY:	clean all
+.PHONY:	clean all config_gen
 
 all: clean # TODO: Set this when it's time
 

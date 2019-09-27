@@ -5,23 +5,13 @@
 #define __TEMPERATURE_DB_H
 #include <stdint.h>
 
-#ifdef TEST
-#include "nvm_mock.h"
-#else
-#include "nvm.h"
-#endif
-
 // ID type for a temperature (also used as an index in the temperature db)
-typedef uint8_t id_t;
+typedef uint16_t id_t;
 
 // Temperature type definition
 // In practice, represent the raw input coming from an LM35 sensor, but the
 // data type could be changed in any moment to store additional informations
 typedef uint16_t temperature_t;
-
-// Parameters for the entire database
-#define TEMP_DB_OFFSET 0
-#define TEMP_DB_CAPACITY ((NVM_SIZE - TEMP_DB_OFFSET) / sizeof(temperature_t))
 
 // Should the database be cached in the volatile memory?
 // This avoids performing a NVM read when getting temperatures
@@ -31,7 +21,7 @@ typedef uint16_t temperature_t;
 typedef struct _temperature_db_s {
   id_t capacity;
   id_t used;
-  temperature_t items[TEMP_DB_CAPACITY];
+  temperature_t *items;
 } temperature_db_t;
 
 
@@ -58,6 +48,7 @@ void temperature_db_reset(void);
 
 // Copy the entire database in a data structure provided by the user
 // Returns 0 on success, 1 otherwise
-uint8_t temperature_fetch_entire_db(temperature_db_t *dest_db);
+uint8_t temperature_fetch_entire_db(temperature_db_t *dest_db,
+    temperature_t *dest_items);
 
 #endif    // __TEMPERATURE_DB_H

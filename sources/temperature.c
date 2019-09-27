@@ -3,35 +3,32 @@
 // Paolo Lucchesi - Wed 21 Aug 2019 04:14:06 PM CEST
 #include <stddef.h>  // offsetof macro
 #include <string.h>  // memcpy
+
 #include "temperature.h"
+#ifdef TEST
+#include "nvm_mock.h"
+#else
+#include "nvm.h"
+#endif
 
 
 // Get the address of an arbitrary field in an NVM, passing the field name
 #define NVM_ADDR_FIELD(field) \
-  (((void*)&nvm_db) + offsetof(temperature_db_t, field))
+  (((void*) &nvm_image->db) + offsetof(temperature_db_t, field))
 
 // Get the address of a single temperature, given its ID, in the NVM
-#define NVM_ADDR_ITEM(id) \
-  ((((void*)&nvm_db) + offsetof(temperature_db_t, items)) +\
-   ((id) * sizeof(temperature_t)))
+#define NVM_ADDR_ITEM(id) (((temperature_t*) nvm_image->db_items) + id)
 
-
-// Get the 'used' field of the temperature
-static inline id_t _db_get_used(void);
-
-// Get the 'capacity' field of the database
-static inline id_t _db_get_capacity(void);
 
 // Fetch the entire database from the NVM
-static void _temperature_fetch_entire_db_from_nvm(temperature_db_t *dest_db);
+static void _temperature_fetch_entire_db_from_nvm(temperature_db_t *dest_db,
+    temperature_t *dest_items);
 
-
-// Permanent database in the NVM
-temperature_db_t NVMMEM nvm_db;
 
 // Database Cache in memory
-#ifdef TEMP_DB_CACHE
 static temperature_db_t cache_db;
+#ifdef TEMP_DB_CACHE
+static temperature_t cache_db_items[TEMP_DB_CAPACITY];
 #endif
 
 
@@ -39,7 +36,9 @@ static temperature_db_t cache_db;
 // Does nothing if DB caching is not enabled
 void temperature_init(void) {
 #ifdef TEMP_DB_CACHE
-  _temperature_fetch_entire_db_from_nvm(&cache_db);
+  _temperature_fetch_entire_db_from_nvm(&cache_db, cache_db_items);
+#else
+  _temperature_fetch_entire_db_from_nvm(&cache_db, NULL);
 #endif
 }
 
@@ -48,16 +47,14 @@ void temperature_init(void) {
 // Returns 0 on success, 1 otherwise (e.g. if there is no more space)
 uint8_t temperature_register(uint16_t raw_val) {
   // Check for available space in the database
-  id_t used = _db_get_used();
-  if (used >= TEMP_DB_CAPACITY)
+  if (cache_db.used >= TEMP_DB_CAPACITY)
     return 1;
 
   // Prepare the temperature to be written to the NVM
   temperature_t *t;
 
 #ifdef TEMP_DB_CACHE
-  t = cache_db.items + used;
-  cache_db.used++;
+  t = cache_db.items + cache_db.used;
 #else
   temperature_t _t;
   t = &_t;
@@ -67,11 +64,11 @@ uint8_t temperature_register(uint16_t raw_val) {
 
   // Effectively register the temperature
   nvm_busy_wait(); // NVM must be available before writing
-  nvm_write(NVM_ADDR_ITEM(used), t, sizeof(temperature_t));
+  nvm_write(NVM_ADDR_ITEM(cache_db.used), t, sizeof(temperature_t));
   nvm_busy_wait();
 
-  ++used;
-  nvm_write(NVM_ADDR_FIELD(used), &used, sizeof(id_t));
+  cache_db.used++;
+  nvm_write(NVM_ADDR_FIELD(used), &cache_db.used, sizeof(id_t));
 
   return 0; // Do not wait for the write operation to be finished
 }
@@ -84,8 +81,7 @@ uint8_t temperature_get(id_t id, temperature_t *dest) {
   if (!dest) return 1;
 
   // Check for the existence of the temperature
-  id_t used = _db_get_used();
-  if (id >= used) return 1;
+  if (id >= cache_db.used) return 1;
 
   // Fetch the temperature in the database
   temperature_t *src;
@@ -104,23 +100,17 @@ uint8_t temperature_get(id_t id, temperature_t *dest) {
   return 0;
 }
 
+
 // Returns the number of temperatures actually present in the database
-id_t temperature_count(void) {
-  return _db_get_used();
-}
+id_t temperature_count(void) { return cache_db.used; }
 
 // Returns the capacity of the database (in registerable temperatures)
-id_t temperature_capacity(void) {
-  return _db_get_capacity();
-}
+id_t temperature_capacity(void) { return cache_db.capacity; }
 
 
 // Reset the database, deleting all the temperatures
 void temperature_db_reset(void) {
-#ifdef TEMP_DB_CACHE
   cache_db.used = 0;
-#endif
-
   id_t zero = 0;
   nvm_busy_wait();
   nvm_write(NVM_ADDR_FIELD(used), &zero, sizeof(id_t));
@@ -129,55 +119,47 @@ void temperature_db_reset(void) {
 
 // Copy the entire database in a data structure provided by the user
 // Returns 0 on success, 1 otherwise
-uint8_t temperature_fetch_entire_db(temperature_db_t *dest_db) {
+uint8_t temperature_fetch_entire_db(temperature_db_t *dest_db,
+    temperature_t *dest_items) {
+
   if (!dest_db) return 1;
 
-#ifdef TEMP_DB_CACHE
+  // Copy the db metadata
   memcpy(dest_db, &cache_db, sizeof(temperature_db_t));
-#else
-  _temperature_fetch_entire_db_from_nvm(dest_db);
-#endif
 
+  // Copy the db items buffer if it is cached, else fetch it
+  if (dest_items) {
+#ifdef TEMP_DB_CACHE
+    memcpy(dest_items, cache_db_items, cache_db.used);
+#else
+    nvm_busy_wait();
+    nvm_read(dest_items, &nvm_image->db_items,
+        cache_db.used * sizeof(temperature_t));
+    nvm_busy_wait();
+#endif
+  }
+
+  dest_db->items = dest_items;
   return 0;
 }
 
 
 // Fetch the entire database from the NVM
-static void _temperature_fetch_entire_db_from_nvm(temperature_db_t *dest_db) {
-  // Get the database metadata, which precedes the items array
-  nvm_busy_wait();
-  nvm_read(dest_db, NVM_ADDR_ITEM(0) - 1,
-      TEMP_DB_OFFSET + offsetof(temperature_db_t, items) - 1);
+static void _temperature_fetch_entire_db_from_nvm(temperature_db_t *dest_db,
+    temperature_t *dest_items) {
 
-  // Get all the temperatures
+  // Get the DB metadata
   nvm_busy_wait();
-  nvm_read(((void*) dest_db) + offsetof(temperature_db_t, items),
-      NVM_ADDR_ITEM(0), dest_db->used * sizeof(temperature_t));
-}
+  nvm_read(dest_db, &nvm_image->db, sizeof(temperature_db_t));
 
+  // If 'dest_db_items' is a valid pointer, fetch the entire items buffer too
+  if (dest_items) {
+    nvm_busy_wait();
+    nvm_read(dest_items, &nvm_image->db_items,
+        cache_db.used * sizeof(temperature_t));
+    dest_db->items = dest_items;
+  }
+  else dest_db->items = NULL;
 
-// Get the 'used' field of the database
-static inline id_t _db_get_used(void) {
-#ifdef TEMP_DB_CACHE
-  return cache_db.used;
-#else
-  id_t used;
   nvm_busy_wait();
-  nvm_read(NVM_ADDR_FIELD(used), &used, sizeof(id_t));
-  nvm_busy_wait();
-  return used;
-#endif
-}
-
-// Get the 'capacity' field of the database
-static inline id_t _db_get_capacity(void) {
-#ifdef TEMP_DB_CACHE
-  return cache_db.capacity;
-#else
-  id_t capacity;
-  nvm_busy_wait();
-  nvm_read(NVM_ADDR_FIELD(capacity), &capacity, sizeof(id_t));
-  nvm_busy_wait();
-  return capacity;
-#endif
 }

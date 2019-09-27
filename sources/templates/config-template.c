@@ -12,7 +12,6 @@
 #include "nvm.h"
 #endif
 
-
 // Data type to store size and relative offset of a field
 typedef struct _config_field_accessor_s {
   uint8_t size;
@@ -28,12 +27,8 @@ static const config_field_accessor_t cfg_accessors[CONFIG_FIELD_COUNT] = {
 static config_t config;
 static void *config_raw = &config;
 
-// Permanent configuration data structure which lives in the NVM
-// TODO: Make 'config_nvm' static if TEST is not a defined macro
-config_t NVMMEM _config_nvm = {
-  //FIELD-NVM-SUBST-HERE
-};
-void * const config_nvm = &_config_nvm;
+// Address to the configuration data in the NVM
+#define NVM_ADDR_CONFIG ((void*) &nvm_image->config)
 
 
 // Get the value of a configuration field
@@ -60,7 +55,7 @@ uint8_t config_set(config_field_t field_id, const void *value) {
 // 'src' is the offset in the NVM of the config data structure to fetch
 uint8_t config_fetch(void) {
   nvm_busy_wait();
-  nvm_read(config_raw, config_nvm, sizeof(config_t));
+  nvm_read(config_raw, NVM_ADDR_CONFIG, sizeof(config_t));
   nvm_busy_wait();
   return 0;
 }
@@ -69,7 +64,7 @@ uint8_t config_fetch(void) {
 // Returns 0 on success, 1 on error
 uint8_t config_save(void) {
   nvm_busy_wait();
-  nvm_update(config_nvm, config_raw, sizeof(config_t));
+  nvm_update(NVM_ADDR_CONFIG, config_raw, sizeof(config_t));
   return 0;
 }
 
@@ -79,7 +74,7 @@ uint8_t config_save_field(config_field_t field) {
   if (field >= CONFIG_FIELD_COUNT)
     return 1;
   nvm_busy_wait();
-  nvm_write(config_nvm + cfg_accessors[field].offset,
+  nvm_write(NVM_ADDR_CONFIG + cfg_accessors[field].offset,
       config_raw + cfg_accessors[field].offset, cfg_accessors[field].size);
   return 0;
 }
@@ -101,7 +96,7 @@ uint8_t config_get_offset(config_field_t field) {
 // Get the default config (i.e. the NVM image)
 uint8_t config_dump(void *dest) {
   if (!dest) return 1;
-  memcpy(dest, config_nvm, sizeof(config_t));
+  memcpy(dest, NVM_ADDR_CONFIG, sizeof(config_t));
   return 0;
 }
 

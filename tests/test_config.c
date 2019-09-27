@@ -10,8 +10,6 @@
 #include "config.h"
 #include "nvm_mock.h"
 
-// Use the same NVM AVR-side source file for default configuration values
-extern const config_t *config_nvm;
 
 int main(int argc, const char *argv[]) {
   printf("avrtmon - AVR Configuration Unit Test\n\n");
@@ -34,12 +32,6 @@ int main(int argc, const char *argv[]) {
     cfg_field_offsets[field] = config_get_offset(field);
 
 
-  // Initialize the mock NVM with the default configuration
-  printf("Initializing mock NVM image\n");
-  assert(sizeof(config_t) <= NVM_SIZE);
-  assert(config_dump(cfg_local) == 0);
-  mock_nvm_init(cfg_local, sizeof(config_t));
-
   // Finally, initialize the configuration module (which lives in memory)
   ret = config_fetch();
   test_expr(ret == 0, "Configuration data should be fetched successfully");
@@ -59,7 +51,7 @@ int main(int argc, const char *argv[]) {
       "destination pointer");
 
   printf("\nTesting obtained (default) values\n");
-  ret = test_expr(memcmp(cfg_local, config_nvm, sizeof(config_t)) == 0,
+  ret = test_expr(memcmp(cfg_local, &nvm->config, sizeof(config_t)) == 0,
       "The obtained configuration data structure should be identical to the "
       "default one");
 

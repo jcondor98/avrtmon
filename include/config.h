@@ -6,16 +6,22 @@
 #include <stdint.h>
 
 // Number of field present in the configuration
-//FIELD-COUNT-SUBST-HERE
+#define CONFIG_FIELD_COUNT 4
 
 // Type definition for the entire configuration
 typedef struct _config_s {
-//CTYPE-SUBST-HERE
+  uint8_t lm_channel;
+  uint16_t lm_interval;
+  uint8_t start_pin;
+  uint8_t stop_pin;
 } config_t;
 
 // Identifiers for each configuration field
 typedef enum CONFIG_FIELD_E {
-//FIELD-ENUM-SUBST-HERE
+  CFG_LM_CHANNEL,
+  CFG_LM_INTERVAL,
+  CFG_START_PIN,
+  CFG_STOP_PIN
 } config_field_t;
 
 

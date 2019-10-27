@@ -8,9 +8,6 @@
 #include <stdio.h>
 #endif
 
-// [AUX] Check the packet header
-uint8_t packet_header_parity(const packet_t *packet);
-
 // Craft a packet (which is preallocated as 'dest')
 // Note that the passed data is sent 'as is', without caring about endianess
 uint8_t packet_craft(packet_type_t type, const uint8_t *data, uint8_t data_size,
@@ -32,7 +29,7 @@ uint8_t packet_craft(packet_type_t type, const uint8_t *data, uint8_t data_size,
 
   // Compute packet header parity
   dest->header_par = 0;
-  dest->header_par = packet_header_parity(dest);
+  dest->header_par = packet_check_header(dest);
 
   // Fill data buffer (without CRC)
   for (uint8_t i=0; i < data_size; ++i)
@@ -69,28 +66,20 @@ uint8_t packet_err(const packet_t *packet) {
 }
 
 
-// Check the integrity of DAT and CMD packets
-// Returns 0 if the packet is sane (i.e. parities and CRCs match)
-uint8_t packet_check(const packet_t *packet) {
+// Check an entire packet via CRC 
+// Returns 0 if the packet is sane, 1 if it is corrupted
+// It is assumed that the header is sane
+uint8_t packet_check_crc(const packet_t *packet) {
   if (!packet) return 1;
-
-  // Check parity for the packet header
-  if (packet_header_parity(packet) != 0) return 1;
-
-  // Check CRC
-  if (crc_check(packet, packet->size) != 0) return 1;
-
-  // After the checks above, we assume that the packet is sane
-  return 0;
+  return (crc_check(packet, packet->size) != 0) ? 1 : 0;  // Check the CRC
 }
 
 
-
-// [AUX] Compute the packet header parity bit
+// Compute the packet header parity bit
 // Returns the even parity bit (1 if data bits sum is odd, 0 if even)
 // Also works as a check, must return 0 (i.e. bits are even) if the packet
 // header is not corrupted by a single bit flip
-uint8_t packet_header_parity(const packet_t *packet) {
+uint8_t packet_check_header(const packet_t *packet) {
   // Count set bits in a nibble in constant time
   static const uint8_t nibble_bitcount_tab[] = {
     0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4

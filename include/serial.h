@@ -44,4 +44,8 @@ uint8_t serial_tx_sent(void);
 uint8_t serial_rx_ongoing(void);
 uint8_t serial_tx_ongoing(void);
 
+// Reset the RX and TX state of the serial interface
+void serial_rx_reset(void);
+void serial_tx_reset(void);
+
 #endif    // __SERIAL_LAYER_H

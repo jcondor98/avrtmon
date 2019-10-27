@@ -20,11 +20,6 @@ volatile uint8_t tx_transmitted = 0;
 volatile uint8_t tx_ongoing = 0;
 
 
-// Reset all RX and TX variables but 'rx_received' and 'rx_transmitted'
-static inline void serial_rx_reset(void);
-static inline void serial_tx_reset(void);
-
-
 // Initialize the USART
 void serial_init(void) {
 	// Set baud rate
@@ -131,14 +126,14 @@ uint8_t serial_tx_ongoing(void) { return tx_ongoing; }
 
 
 // Reset indexes for receiving data from the serial
-static inline void serial_rx_reset(void) {
+void serial_rx_reset(void) {
   rx_buffer = NULL;
   rx_size = 0;
   rx_ongoing = 0;
 }
 
 // Reset indexes for transmitting data with the serial
-static inline void serial_tx_reset(void) {
+void serial_tx_reset(void) {
   tx_to_transmit = 0;
   tx_transmitted = 0;
   tx_ongoing = 0;

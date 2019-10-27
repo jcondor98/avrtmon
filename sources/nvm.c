@@ -14,9 +14,10 @@
 // The memory image itself
 nvm_image_t NVMMEM _nvm_image = {
   .config = {
-    .field1 = 1,
-    .field2 = 2,
-    .field3 = 3
+    .lm_channel = 0,
+    .lm_interval = 0,
+    .start_pin = 0,
+    .stop_pin = 0
   },
   .db = {
     .capacity = TEMP_DB_CAPACITY,

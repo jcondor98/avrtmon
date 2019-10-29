@@ -1,8 +1,8 @@
 // avrtmon
 // LM Sensor layer - Head file
 // Paolo Lucchesi - Sun 18 Aug 2019 05:28:53 PM CEST
-#ifndef __LM_SENSON_LAYER_H
-#define __LM_SENSON_LAYER_H
+#ifndef __LM_SENSOR_LAYER_H
+#define __LM_SENSOR_LAYER_H
 #include <stdint.h>
 
 // Initialize ADC and other required stuff
@@ -21,4 +21,4 @@ uint8_t lm_available(void);
 // Get the last registered temperature (as a raw tension converted by the ADC)
 uint16_t lm_getresult(void);
 
-#endif    // __LM_SENSON_LAYER_H
+#endif    // __LM_SENSOR_LAYER_H

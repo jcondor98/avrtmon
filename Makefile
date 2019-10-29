@@ -52,7 +52,8 @@ $(OBJDIR)/%.o:	%.s
 
 # Generate the configuration sources
 config_gen:
-	resources/bin/config-gen -c resources/config/default.csv
+	resources/bin/config-gen -c resources/config/default.csv \
+	  -S sources/avr/config.c
 
 
 # Test (from the PC's OS) a module of the project
@@ -61,7 +62,18 @@ config_gen:
 # The function expect to find a source file named 'tests/<test_name>.c'
 # You can also choose a test method defining the variable 'TEST_WITH' in your
 # shell. Supported option are none (i.e. execute as-is), 'gdb' and 'less'
-test_%: CFLAGS += $(TESTFLAGS)
+test_%: CFLAGS := $(TESTFLAGS) $(CFLAGS)
+
+# Generate a mock configuration for testing
+define test_config_gen =
+	$(RESDIR)/bin/config-gen -c $(RESDIR)/config/test.csv -S tests/config.c \
+	  -H tests/include/config.h -N tests/nvm.c
+endef
+
+# Remove the mock configuration for testing
+define test_config_clean =
+	rm tests/{config.c,include/config.h,nvm.c}
+endef
 
 test_crc: $(addprefix $(OBJDIR)/, crc.o)
 	$(call host_test)
@@ -70,18 +82,26 @@ test_packet: $(addprefix $(OBJDIR)/, crc.o packet.o)
 	$(call host_test)
 
 test_temperature:
-	$(call host_test, $(SRCDIR)/temperature.c tests/mock_nvm.c sources/nvm.c)
+	$(call test_config_gen)
+	$(call host_test, $(SRCDIR)/avr/temperature.c tests/mock_nvm.c $(SRCDIR)/nvm.c)
+	$(call test_config_clean)
 
 test_config:
-	$(RESDIR)/bin/config-gen -c $(RESDIR)/config/test.csv -S tests/config.c \
-	  -H tests/include/config.h
+	$(call test_config_gen)
 	$(call host_test, tests/config.c tests/mock_nvm.c)
-	rm tests/{config.c,include/config.h}
+	$(call test_config_clean)
 
 test_serial: tests/serial_test.hex
 	# TODO: Write an automated test for host-side
 	# TODO: Provide also 'serial.o' object file
 
+# Perform all tests in a stroke
+test: CFLAGS := $(TESTFLAGS) $(CFLAGS)
+test:
+	@make -s test_crc
+	@make -s test_packet
+	@make -s test_config
+	@make -s test_temperature
 
 # Standard make PHONY rules
 .PHONY:	clean all config_gen

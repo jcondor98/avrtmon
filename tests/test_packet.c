@@ -165,7 +165,8 @@ static void test_sbp(const packet_t *packet, packet_type_t type,
 static void test_packet_integrity(packet_validity_t should_be_valid,
     const packet_t *packet) {
 
-  uint8_t is_not_valid = packet_check(packet);
+  uint8_t is_not_valid =
+    packet_check_header(packet) != 0 || packet_check_crc(packet) != 0;
   int expr = should_be_valid ^ is_not_valid;
 
   test_expr(expr,

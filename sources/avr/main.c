@@ -6,6 +6,7 @@
 #include "temperature.h"
 #include "lmsensor.h"
 #include "command.h"
+#include "buttons.h"
 #include "config.h"
 
 // Temperature handler
@@ -17,11 +18,13 @@ int main(int argc, const char *argv[]) {
   config_fetch();
   temperature_init();
   command_init();
+  buttons_init();
   com_init();
 
   // Main application loop
   while (1) {
-    com_handler(); // Check for incoming packets
-    temperature_handler();   // Check for temperatures ready to be registered
+    com_handler();          // Check for incoming packets
+    temperature_handler();  // Check for temperatures ready to be registered
+    buttons_handler();      // Check for AVR-side user interaction
   }
 }

@@ -91,6 +91,12 @@ test_config:
 	$(call host_test, tests/config.c tests/mock_nvm.c)
 	$(call test_config_clean)
 
+test_shell:
+	$(call host_test, $(SRCDIR)/host/shell.c)
+
+test_list:
+	$(call host_test, $(SRCDIR)/host/list.c)
+
 test_serial: tests/serial_test.hex
 	# TODO: Write an automated test for host-side
 	# TODO: Provide also 'serial.o' object file

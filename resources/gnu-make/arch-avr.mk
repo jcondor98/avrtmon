@@ -7,7 +7,7 @@ CC := avr-gcc
 AS := avr-gcc
 CFLAGS := -Wall --std=c99 -DF_CPU=16000000UL -O3 -funsigned-char \
 		-funsigned-bitfields  -fshort-enums -Wstrict-prototypes \
-		-mmcu=atmega2560 -I$(INCDIR) -DAVR -D__AVR_3_BYTE_PC__
+		-mmcu=atmega2560 -I$(INCDIR) -I$(INCDIR)/avr -DAVR -D__AVR_3_BYTE_PC__
 ASFLAGS := -x assembler-with-cpp $(CFLAGS)
 
 AVRDUDE := avrdude

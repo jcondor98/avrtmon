@@ -29,6 +29,7 @@ From now to the end of this document, we use the following terminology:
 * **NVM** is the _Non-Volatile Memory_ of the tmon, likely the internal EEPROM.
 We refer to it in abstract terms as we could use another device (e.g. an SD card)
 
+<!--
 ### Developer notes
 
 * After a brief statistical analysis of communication error probability, the use
@@ -36,7 +37,7 @@ of CRC-8 might dropped in favour of CRC-16
 
 * The structure of the packet header in the communication protocol is defined in
 its overall structure, hence not yet definitive and susceptible to changes
-
+-->
 
 ## Serial/Packet protocol
 
@@ -61,15 +62,16 @@ header\_par |1 | (Even) Parity bit of the header
 
 The type of the packet can be one of the following:
 
-Type | C Macro | Code (binary) | Description
+Type | Numeric Code | Description
 --:|:-:|:-:|---
-Data | `DAT` | `0000` | Data (i.e. temperatures) sent from the tmon to the PC
-Command | `CMD` | `0001` | Command sent from the PC to the tmon
-Acknowledgement | `ACK` | `0010` | Acknowledgement message
-Error | `ERR` | `0011` | Communication error (e.g. CRC mismatch)
+HND | 0x00 | Handshake
+ACK | 0x01 | Acknowledgement
+ERR | 0x02 | Communication error (e.g. CRC mismatch)
+CMD | 0x03 | Command (sent from the PC to the tmon)
+CTR | 0x04 | Control sequence (e.g. for commands)
+DAT | 0x05 | Data (e.g. temperatures) sent from the tmon to the PC
 
-The redundant bits (most significant ones) are reserved for future use, ~~ or
-might be used to extend the packet id field.~~
+The redundant bits (most significant ones) are reserved for future use.
 
 The packet id is not unique in an entire session, as the crucial thing is to
 avoid collisions of (i.e. distinguish) successive packets. 
@@ -91,28 +93,30 @@ it is sane, then an ACK packet is sent; if not, then an ERR packet is sent, and
 the previously sent packet must be resent.
 
 
-<!-- The contents below are a stub, do not consider them
 ## Configuration
 
 The tmon configuration is stored at the beginning of its NVM, without any offset,
-as a raw data structure.
+as a raw data structure. The default configuration is shipped with the program
+image, and flashed to the NVM with it.
 
-Field | Size (bytes) | Description
---:|:-:|---
-Registering Interval | 2 | Temperature registering interval in tenths of a second
-ADC Channel | 1 | Identifies the analog pin used by the LM35
-Unit of Measure | 1 | Unit of measure of the temperature (Celsius, Kelvin ...)
-First Temperature Index | ? | Index of the first temperature inside the NVM
-Autostart | 1 | Start registering immediately after starting the tmon?
-Start Button Pin | ? | Pin and port designed for the start button
-Stop Button Pin | ? | Pin and port designed for the stop button
+The configuration can be permanently changed using remote commands.
 
 
-TODO: Commands
- * Download registered data
- * Set a configuration parameter
- * Start registering
- * Stop registering
- * Erase registrations
+## Commands
 
--->
+The tmon supports the execution of remote, arbitrary commands sent from the PC
+via CMD packets. Those commands are the following:
+
+Command | Description
+:-:|:--
+CONFIG\_GET\_FIELD | Get a configuration field (value is transported in a DAT packet)
+CONFIG\_SET\_FIELD | Set a configuration field to an arbitrary value
+TEMPERATURES\_DOWNLOAD | Download all the temperatures (after that, the tmon DB will be reset)
+TEMPERATURES\_RESET | Reset the temperatures DB
+
+From the tmon prespective, a command is an entity composed of:
+
+* A void function, which takes an opaque pointer to a constant value as its
+argument, representing the command itself
+* A _communication opmode_, i.e. a set of functions which modifies the behaviour
+of the communication module

@@ -5,8 +5,8 @@
 # Host Compiler setup
 CC := gcc
 CFLAGS := -Wall --std=c99 -O2 -funsigned-bitfields -fshort-enums \
-  -Wstrict-prototypes -I$(INCDIR)
-TESTFLAGS := -Itests/include -I$(INCDIR)/avr -I$(INCDIR)/host -DTEST -ggdb -Wno-format
+  -Wstrict-prototypes -I$(INCDIR)/host -I$(INCDIR)
+TESTFLAGS := -Itests/include -I$(INCDIR)/avr -DAVR -DTEST -ggdb -Wno-format
 
 
 # Host-side testing canned recipe

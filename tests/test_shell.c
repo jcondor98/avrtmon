@@ -16,6 +16,7 @@ int shell_cmd_echo(int argc, char *argv[], void *storage) {
 
 shell_command_t echo = {
   .name = "echo",
+  .help = "Usage: echo [arg1 arg2 ...]\nRepeat what you write",
   .exec = shell_cmd_echo
 };
 

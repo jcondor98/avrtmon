@@ -50,10 +50,14 @@ $(OBJDIR)/%.o:	%.s
 .PRECIOUS: $(OBJDIR)/%.o
 
 
+all: $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(wildcard $(SRCDIR)/*.c)) $(patsubst $(SRCDIR)/$(ARCH)/%.c, $(OBJDIR)/%.o, $(wildcard $(SRCDIR)/$(ARCH)/*.c))
+	make -s config_gen
+	$(CC) $(CFLAGS) -o avrtmon_bin $^
+
+
 # Generate the configuration sources
 config_gen:
-	resources/bin/config-gen -c resources/config/default.csv \
-	  -S sources/avr/config.c
+	resources/bin/config-gen -c $(RESDIR)/config/default.csv -N $(SRCDIR)/avr/nvm.c
 
 
 # Test (from the PC's OS) a module of the project
@@ -108,13 +112,13 @@ test:
 	@make -s test_packet
 	@make -s test_config
 	@make -s test_temperature
+	@make -s test_shell
+	@make -s test_list
 
 # Standard make PHONY rules
 .PHONY:	clean all config_gen
 
-all: clean # TODO: Set this when it's time
-
 clean:	
-	rm -f $(OBJDIR)/../{avr,host}/* $(BINS) tests/bin/* sources/config.c \
-	  include/config.h tests/{config.c,include/config.h}
+	rm -f $(OBJDIR)/../{avr,host}/* $(BINS) tests/bin/* \
+	  sources/{config,avr/nvm}.c include/config.h tests/{config.c,include/config.h}
 

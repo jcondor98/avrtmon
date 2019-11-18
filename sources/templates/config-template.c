@@ -1,6 +1,7 @@
 // avrtmon
 // AVR-side Configuration - Source file
 // Paolo Lucchesi - Tue 27 Aug 2019 06:58:59 PM CEST
+#define _POSIX_C_SOURCE 200809L  // So we can use strdup() with ANSI C
 #include <string.h> // memcpy
 #include <stddef.h> // offsetof
 
@@ -12,6 +13,9 @@
 #include "nvm.h"
 #endif
 
+
+// Stuff common to host and AVR
+
 // Data type to store size and relative offset of a field
 typedef struct _config_field_accessor_s {
   uint8_t size;
@@ -22,6 +26,15 @@ typedef struct _config_field_accessor_s {
 static const config_field_accessor_t cfg_accessors[CONFIG_FIELD_COUNT] = {
 //FIELD-SIZE-SUBST-HERE
 };
+
+// Get the size of a single field
+uint8_t config_get_size(config_field_t field) {
+  return field >= CONFIG_FIELD_COUNT ? 0 : cfg_accessors[field].size;
+}
+
+
+// AVR-side stuff
+#ifdef AVR
 
 // Configuration data which lives in memory
 static config_t config;
@@ -80,13 +93,39 @@ uint8_t config_save_field(config_field_t field) {
 }
 
 
+// Host-side stuff
+#else
+
+// TODO: (maybe) Optimize making this a hash table
+static const char *_config_field_str[] = {
+  //FIELD-STR-SUBST-HERE
+};
+
+// Get a string representing a config field (by config field id)
+// Returns a pointer to a duplicated string relative to the field id, or NULL
+// on failure
+char *config_field_str(config_field_t field) {
+  return (field < CONFIG_FIELD_COUNT) ? strdup(_config_field_str[field]) : NULL;
+}
+
+// Get a config field id given its id
+// On success, 0 is returned and the config field value is written to 'dest'
+// On failure, 1 is returned and 'dest' is not touched
+// TODO: (maybe) Optimize making 'config_field_str' a hash table
+int config_field_id(const char *desc, config_field_t *dest) {
+  for (config_field_t f=0; f < CONFIG_FIELD_COUNT; ++f)
+    if (strcmp(desc, _config_field_str[f]) == 0) {
+      *dest = f;
+      return 0;
+    }
+  return 1;
+}
+
+#endif  // AVR
+
+
 // The functions below shall be used only for testing
 #ifdef TEST
-
-// Get the size of a single field
-uint8_t config_get_size(config_field_t field) {
-  return field >= CONFIG_FIELD_COUNT ? 0 : cfg_accessors[field].size;
-}
 
 // Get the offset of a single field
 uint8_t config_get_offset(config_field_t field) {

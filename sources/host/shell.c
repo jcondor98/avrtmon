@@ -1,7 +1,7 @@
 // avrtmon
 // Program shell (i.e. command line) - Source file
 // Paolo Lucchesi - Thu 31 Oct 2019 02:31:26 AM CET
-#define _POSIX_C_SOURCE 200809L
+#define _POSIX_C_SOURCE 200809L  // So we can use strdup() with ANSI C
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,7 +12,7 @@
 #define SHELL_LINE_MAX_LEN 2046
 
 // Shell default prompt
-const char *default_prompt = "> ";
+static const char *default_prompt = "> ";
 
 
 // [AUX] Comparator for commands name to sort the commands array of the shell
@@ -100,10 +100,40 @@ void shell_launch(shell_t *shell) {
     for (argc = 1; (argv[argc] = strtok(NULL, " \t\n")) != NULL; ++argc)
       ;
 
-    // Search and eventually launch the command (if found)
-    shell_command_t *cmd = shell_command_get(shell, argv[0]);
-    if (cmd) cmd->exec(argc, argv, shell->storage);
-    else printf("Command not found: %s\n", argv[0]);
+    // First, determine if the command is a built-in
+    if (strcmp(argv[0], "help") == 0) {  // 'help'
+      // Generic use of 'help'
+      if (argc == 1)
+        for (size_t i=0; i < shell->commands_count; ++i) {
+          fputs(shell->commands[i].name, stdout);
+          putchar('\n');
+        }
+
+      // 'help' takes a command name as its sole argument
+      else if (argc == 2) {
+        shell_command_t *cmd = shell_command_get(shell, argv[1]);
+        if (cmd) {
+          if (cmd->help) {
+            fputs(cmd->help, stdout);
+            putchar('\n');
+          }
+          else printf("No help for command %s\n", cmd->name);
+        }
+        else printf("Unknown command: %s\n", argv[1]);
+      }
+
+      // No more than an argument is accepted
+      else fputs("Bad use of 'help'\nUsage: help [command]\n", stdout);
+    }
+
+    else if (strcmp(argv[0], "exit") == 0)  // 'exit'
+      break;
+
+    else { // Search and eventually launch the command (if found)
+      shell_command_t *cmd = shell_command_get(shell, argv[0]);
+      if (cmd) cmd->exec(argc, argv, shell->storage);
+      else printf("Command not found: %s\n", argv[0]);
+    }
 
     // Print the shell prompt again for the next input line
     fputs(shell->prompt, stdout);

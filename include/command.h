@@ -3,8 +3,11 @@
 // Paolo Lucchesi - Sun 06 Oct 2019 05:14:06 PM CEST
 #ifndef __COMMAND_INTERFACE_H
 #define __COMMAND_INTERFACE_H
-#include "communication.h"
 #include "config.h"
+
+#ifdef AVR
+#include "communication.h"
+#endif
 
 
 // Command id data type definition
@@ -20,7 +23,7 @@ typedef enum COMMAND_ID_E {
 // Command payload transported via CMD packet from host to AVR
 typedef struct _command_payload_s {
   command_id_t id;
-  uint8_t arg[];
+  uint8_t arg[];  // This can be casted to any required type for a specific cmd
 } command_payload_t;
 
 // Command payload argument: set a configuration field to an arbitrary value
@@ -29,6 +32,7 @@ typedef struct _config_setter_s {
   uint8_t value[];
 } config_setter_t;
 
+typedef uint16_t command_download_arg_t;
 
 #ifdef AVR
 

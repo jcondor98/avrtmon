@@ -1,6 +1,7 @@
 // avrtmon
 // AVR-side Configuration - Source file
 // Paolo Lucchesi - Tue 27 Aug 2019 06:58:59 PM CEST
+#define _POSIX_C_SOURCE 200809L  // So we can use strdup() with ANSI C
 #include <string.h> // memcpy
 #include <stddef.h> // offsetof
 
@@ -13,8 +14,7 @@
 #endif
 
 
-// AVR-side stuff
-#ifdef AVR
+// Stuff common to host and AVR
 
 // Data type to store size and relative offset of a field
 typedef struct _config_field_accessor_s {
@@ -29,6 +29,15 @@ static const config_field_accessor_t cfg_accessors[CONFIG_FIELD_COUNT] = {
   { .size = sizeof(uint8_t), .offset = offsetof(config_t, start_pin) },
   { .size = sizeof(uint8_t), .offset = offsetof(config_t, stop_pin) }
 };
+
+// Get the size of a single field
+uint8_t config_get_size(config_field_t field) {
+  return field >= CONFIG_FIELD_COUNT ? 0 : cfg_accessors[field].size;
+}
+
+
+// AVR-side stuff
+#ifdef AVR
 
 // Configuration data which lives in memory
 static config_t config;
@@ -86,25 +95,23 @@ uint8_t config_save_field(config_field_t field) {
   return 0;
 }
 
-// Get the size of a single field
-uint8_t config_get_size(config_field_t field) {
-  return field >= CONFIG_FIELD_COUNT ? 0 : cfg_accessors[field].size;
-}
-
 
 // Host-side stuff
 #else
 
 // TODO: (maybe) Optimize making this a hash table
-static const char *config_field_str[] = {
-  //FIELD_STR_SUBST_HERE
+static const char *_config_field_str[] = {
+  "lm_channel",
+  "lm_interval",
+  "start_pin",
+  "stop_pin"
 };
 
 // Get a string representing a config field (by config field id)
 // Returns a pointer to a duplicated string relative to the field id, or NULL
 // on failure
 char *config_field_str(config_field_t field) {
-  return (field < CONFIG_FIELD_COUNT) ? strdup(config_field_str[field]) : NULL;
+  return (field < CONFIG_FIELD_COUNT) ? strdup(_config_field_str[field]) : NULL;
 }
 
 // Get a config field id given its id
@@ -112,8 +119,8 @@ char *config_field_str(config_field_t field) {
 // On failure, 1 is returned and 'dest' is not touched
 // TODO: (maybe) Optimize making 'config_field_str' a hash table
 int config_field_id(const char *desc, config_field_t *dest) {
-  for (config_field_t f=0; f < CONFIG_FIELD_COUNT; ++i)
-    if (strcmp(desc, config_field_str[f]) == 0) {
+  for (config_field_t f=0; f < CONFIG_FIELD_COUNT; ++f)
+    if (strcmp(desc, _config_field_str[f]) == 0) {
       *dest = f;
       return 0;
     }

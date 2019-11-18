@@ -7,9 +7,8 @@
 #define __NVM_INTERFACE_H
 #include <stddef.h>
 
-#ifndef TEST
+#ifdef AVR
 #include <avr/eeprom.h>
-#endif
 
 #include "config.h"
 #include "temperature.h"
@@ -62,4 +61,5 @@ typedef struct _nvm_image_s {
 // It is safe to expose this as the image will be saved in the .eeprom section
 nvm_image_t *nvm_image;
 
-#endif    // __NVM_INTERFACE_H
+#endif  // AVR
+#endif  // __NVM_INTERFACE_H

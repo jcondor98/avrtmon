@@ -63,7 +63,7 @@ int list_remove(list_t *l, size_t index, void **value);
 typedef list_t queue_t;
 #define queue_size(q) list_size(q)
 #define queue_push(q,val) list_add_head(q,val)
-#define queue_pop(q,dst) list_remove_head(q,dst)
+#define queue_pop(q,dst) list_remove_tail(q,dst)
 
 
 /* TODO: One day, when I will need, I shall implement the following:

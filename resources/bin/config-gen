@@ -81,6 +81,7 @@ FIELD_ENUM_SUBSTITUTE_FLAG="FIELD-ENUM-SUBST-HERE"
 FIELD_COUNT_SUBSTITUTE_FLAG="FIELD-COUNT-SUBST-HERE"
 FIELD_MOD_SUBSTITUTE_FLAG="FIELD-SIZE-SUBST-HERE"
 FIELD_NVM_SUBSTITUTE_FLAG="FIELD-NVM-SUBST-HERE"
+FIELD_STR_SUBSTITUTE_FLAG="FIELD-STR-SUBST-HERE"
 
 
 # Check for the existence of the parameters
@@ -100,6 +101,7 @@ CTYPE_TMP_FILE="${TMPDIR}/avrtmon_config_ctype.tmp"
 FIELD_ENUM_TMP_FILE="${TMPDIR}/avrtmon_config_meta.tmp"
 FIELD_MOD_TMP_FILE="${TMPDIR}/avrtmon_config_mod.tmp"
 FIELD_NVM_TMP_FILE="${TMPDIR}/avrtmon_config_nvm.tmp"
+FIELD_STR_TMP_FILE="${TMPDIR}/avrtmon_config_str.tmp"
 
 
 # Register field information in the temporary files
@@ -111,12 +113,15 @@ while IFS=',' read cfg_field cfg_type cfg_default; do
   echo "${TAB}{ .size = sizeof(${cfg_type}), .offset = offsetof(config_t, ${cfg_field}) }," \
     >> $FIELD_MOD_TMP_FILE
   echo "${TAB}${TAB}.${cfg_field} = ${cfg_default}," >> $FIELD_NVM_TMP_FILE
+  echo "${TAB}\"${cfg_field}\"," \
+    >> $FIELD_STR_TMP_FILE
   let '++field_count'
 done < "$CSV_IN"
 
 # Remove last commas from the temporary files
 sed '$ { s/,// }'     -i $FIELD_ENUM_TMP_FILE
 sed '$ { s/,// }'     -i $FIELD_NVM_TMP_FILE
+sed '$ { s/,// }'     -i $FIELD_STR_TMP_FILE
 sed '$ { s/\},/\}/ }' -i $FIELD_MOD_TMP_FILE
 
 
@@ -132,9 +137,12 @@ D
 s/^.*$/#define CONFIG_FIELD_COUNT $field_count/
 }" < "$HEADER_TEMPLATE" > "$HEADER_OUT"
 
-# Configuration fields accessors
+# Configuration fields accessors and string description
 sed -e "/\/\/$FIELD_MOD_SUBSTITUTE_FLAG/ {
 r $FIELD_MOD_TMP_FILE
+D
+}"  -e "/\/\/$FIELD_STR_SUBSTITUTE_FLAG/ {
+r $FIELD_STR_TMP_FILE
 D
 }" < "$SOURCE_TEMPLATE" > "$SOURCE_OUT"
 

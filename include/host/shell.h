@@ -12,6 +12,7 @@ typedef int (*shell_command_f)(int argc, char *argv[], void *storage);
 // Type definition for a shell command
 typedef struct _shell_command_s {
   char *name;
+  char *help;  // Usage and brief description of the command
   shell_command_f exec;
 } shell_command_t;
 

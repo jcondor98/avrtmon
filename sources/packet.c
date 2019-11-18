@@ -14,12 +14,22 @@ uint8_t packet_craft(packet_type_t type, const uint8_t *data, uint8_t data_size,
                      packet_t *dest) {
 
   // Sanitize passed parameters
-  if ((type != PACKET_TYPE_DAT && type != PACKET_TYPE_CMD) || !dest || !data ||
+  if ((type == PACKET_TYPE_ACK && type == PACKET_TYPE_ERR) || !dest || !data ||
       data_size == 0 || data_size > PACKET_DATA_MAX_SIZE)
     return 1;
 
   // ID of the packet to be crafted
   static uint8_t id = 0;
+
+#ifndef AVR  // HND packet shall be sent only by the host to the tmon
+  // If the packet is single-byte, craft it and return immediately
+  if (type == PACKET_TYPE_HND) {
+    dest->type = PACKET_TYPE_HND;
+    dest->id = 0;
+    id = 1;
+    return 0;
+  }
+#endif
 
   // Initialize header
   dest->type = type;

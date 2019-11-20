@@ -3,6 +3,7 @@
 // Paolo Lucchesi - Mon 28 Oct 2019 01:04:26 AM CET
 #ifndef __LM_SENSOR_TIMER_H
 #define __LM_SENSOR_TIMER_H
+#include <stdint.h>
 
 // Initialize the timer
 void lm_timer_init(void);

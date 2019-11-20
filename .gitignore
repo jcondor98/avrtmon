@@ -1,4 +1,5 @@
 objects/*/*
-!objects/*/.gitkeep
+!objects/**/*/.gitkeep
 tests/bin/*
 limbo/
+target/{host,avr}/*

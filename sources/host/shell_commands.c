@@ -54,10 +54,17 @@ int echo(int argc, char *argv[], void *storage) {
 int connect(int argc, char *argv[], void *storage) {
   _storage_cast(st, storage);
   if (argc < 2) return 1;
-  if (st->tmon_fd >= 0) return 2; // i.e. already connected
+
+  if (st->tmon_fd >= 0) { // i.e. already connected
+    fputs("Error: already connected\n", stderr);
+    return 2;
+  }
 
   int tmon_fd = serial_open(argv[1]);
-  if (tmon_fd < 0) return 2;
+  if (tmon_fd < 0) {
+    perror("Unable to connect to the tmon");
+    return 2;
+  }
 
   st->tmon_fd = tmon_fd;
   return serial_craft_and_send(PACKET_TYPE_HND, NULL, 0, st->tmon_fd);
@@ -70,7 +77,12 @@ int connect(int argc, char *argv[], void *storage) {
 int reconnect(int argc, char *argv[], void *storage) {
   _storage_cast(st, storage);
   if (argc != 1) return 1;
-  if (st->tmon_fd < 0) return 2;
+
+  if (st->tmon_fd < 0) {  // i.e. not connected
+    fputs("Error: tmon is not connected\n", stderr);
+    return 2;
+  }
+
   return serial_craft_and_send(PACKET_TYPE_HND, NULL, 0, st->tmon_fd);
 }
 
@@ -81,7 +93,10 @@ int reconnect(int argc, char *argv[], void *storage) {
 int download(int argc, char *argv[], void *storage) {
   _storage_cast(st, storage);
   if (argc > 1) return 1;
-  if (st->tmon_fd < 0) return 2;
+  if (st->tmon_fd < 0) {  // i.e. not connected
+    fputs("Error: tmon is not connected\n", stderr);
+    return 2;
+  }
 
   // Max number of temperatures contained in a DB
   static const unsigned temp_burst = PACKET_DATA_MAX_SIZE / sizeof(uint16_t);
@@ -130,7 +145,10 @@ int download(int argc, char *argv[], void *storage) {
 int tmon_reset(int argc, char *argv[], void *storage) {
   _storage_cast(st, storage);
   if (argc != 1) return 1;
-  if (st->tmon_fd < 0) return 2;
+  if (st->tmon_fd < 0) {  // i.e. not connected
+    fputs("Error: tmon is not connected\n", stderr);
+    return 2;
+  }
   return serial_cmd(CMD_TEMPERATURES_RESET, NULL, 0, st->tmon_fd);
 }
 
@@ -270,11 +288,15 @@ int export(int argc, char *argv[], void *storage) {
   temperature_db_t *db;
 
   size_t db_id = atoi(argv[1]);
-  if (list_get(st->dbs, db_id, (void**) &db) != 0)
+  if (list_get(st->dbs, db_id, (void**) &db) != 0) {
+    fprintf(stderr, "Error: could not fetch database of index %zu\n", db_id);
     return 2;
+  }
 
-  if (temperature_db_export(db, argv[2]))
+  if (temperature_db_export(db, argv[2])) {
+    fputs("Error while exporting database\n", stderr);
     return 2;
+  }
 
   return 0;
 }
@@ -312,14 +334,14 @@ static shell_command_t _shell_commands[] = {
   },
 
   (shell_command_t) { // CMD: tmon-reset
-    .name = "tmon",
+    .name = "tmon-reset",
     .help = "Usage: tmon-reset\n"
       "Reset the internal temperatures DB of the tmon",
     .exec = tmon_reset
   },
 
   (shell_command_t) { // CMD: tmon-config
-    .name = "tmon",
+    .name = "tmon-config",
     .help = "Usage: tmon-config list\n"
             "       tmon-config get <field>"
             "       tmon-config set <field> <value>"

@@ -8,7 +8,7 @@
 
 
 // Command starter
-void _start(const void *arg) {
+static void _start(const void *arg) {
   const config_setter_t *_arg = arg;
   config_set(_arg->id, _arg->value);
 }

@@ -50,7 +50,7 @@ uint8_t _rx_pack_busy_wait(void) {
     available = serial_rx_available();
 
   // Check the packet against its CRC
-  if (packet_check_crc((void*) rx_buf) != 0) {
+  if (packet_check_crc((void*) rx_buf) != 0)
     return 1;
 
   return 0; // Success
@@ -58,7 +58,7 @@ uint8_t _rx_pack_busy_wait(void) {
 
 
 // Communication handler
-void communication_handler(void) {
+void com_handler(void) {
   const uint8_t available = serial_rx_available();
 
   // If no data is available, return immediately
@@ -109,6 +109,13 @@ void com_send(const packet_t *pack) {
 
 // Resend the last TX packet
 void com_resend(void) { _com_send(); }
+
+// Send an in-place crafted packet
+void com_craft_and_send(packet_type_t type, const uint8_t *data,
+    uint8_t data_size) {
+  if (packet_craft(type, data, data_size, &tx_pack) == 0)
+    _com_send();
+}
 
 // Acknowledge a received packet
 void com_ack(const packet_t *pack) {

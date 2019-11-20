@@ -3,6 +3,7 @@
 // Paolo Lucchesi - Wed 23 Oct 2019 04:56:11 PM CEST
 #include "command.h"
 #include "temperature.h"
+#include "communication.h"
 
 #define COMMAND_NAME cmd_temperatures_download
 #define TEMP_BURST (PACKET_DATA_MAX_SIZE / sizeof(temperature_t))
@@ -13,7 +14,7 @@ static temperature_t temp_buf[TEMP_BURST];
 
 
 // Command starter
-void _start(const void *arg) {
+static void _start(const void *arg) {
   // Initialize command status variables
   temp_idx = 0;
   temp_total = temperature_count();

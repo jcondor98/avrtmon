@@ -8,7 +8,7 @@
 
 
 // Command starter
-void _start(const void *arg) {
+static void _start(const void *arg) {
   temperature_db_reset();
 }
 

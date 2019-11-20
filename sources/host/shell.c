@@ -131,7 +131,11 @@ void shell_launch(shell_t *shell) {
 
     else { // Search and eventually launch the command (if found)
       shell_command_t *cmd = shell_command_get(shell, argv[0]);
-      if (cmd) cmd->exec(argc, argv, shell->storage);
+      if (cmd) {
+        int ret = cmd->exec(argc, argv, shell->storage);
+        if (ret != 0)
+          fprintf(stderr, "Command '%s' exited with status %d\n", cmd->name, ret);
+      }
       else printf("Command not found: %s\n", argv[0]);
     }
 

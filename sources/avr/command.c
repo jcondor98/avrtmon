@@ -10,8 +10,8 @@
 static command_t *cmd_table[COMMAND_COUNT];
 
 // Imported commands
-extern command_t *cmd_config_get_param;
-extern command_t *cmd_config_set_param;
+extern command_t *cmd_config_get_field;
+extern command_t *cmd_config_set_field;
 extern command_t *cmd_temperatures_download;
 extern command_t *cmd_temperatures_reset;
 
@@ -31,8 +31,8 @@ uint8_t command_exec(command_id_t id, const void *arg) {
 
 // Initialize the command table
 void command_init(void) {
-  cmd_table[CMD_CONFIG_GET_FIELD]      = cmd_config_get_param;
-  cmd_table[CMD_CONFIG_SET_FIELD]      = cmd_config_set_param;
+  cmd_table[CMD_CONFIG_GET_FIELD]      = cmd_config_get_field;
+  cmd_table[CMD_CONFIG_SET_FIELD]      = cmd_config_set_field;
   cmd_table[CMD_TEMPERATURES_DOWNLOAD] = cmd_temperatures_download;
   cmd_table[CMD_TEMPERATURES_RESET]    = cmd_temperatures_reset;
 }

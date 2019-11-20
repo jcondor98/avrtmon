@@ -2,6 +2,7 @@
 // Command interface - Single command template
 // Paolo Lucchesi - Wed 23 Oct 2019 04:56:11 PM CEST
 #include <string.h>
+#include "communication.h"
 #include "command.h"
 #include "config.h"
 
@@ -9,7 +10,7 @@
 
 
 // Command starter
-void _start(const void *arg) {
+static void _start(const void *arg) {
   config_field_t field = *((config_field_t*) arg);
   uint8_t field_size = config_get_size(field);
 

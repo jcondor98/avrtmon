@@ -26,14 +26,14 @@ ISR(TIMER1_COMPA_vect) {
 
 // Initialize the timer
 void lm_timer_init(void) {
-  config_get_field(CFG_LM_INTERVAL, &interval);
+  config_get(CFG_LM_INTERVAL, &interval);
 
   // Set the prescaler to 1024
   TCCR1A = 0;
   TCCR1B = (1 << WGM52) | (1 << CS50) | (1 << CS52);
 
   // Set the OCR value
-  0CR1A = (uint16_t)(15.625 * TIMER_RES);
+  OCR1A = (uint16_t)(15.625 * TIMER_RES);
 }
 
 

@@ -34,8 +34,8 @@ static void test_packet_integrity(packet_validity_t should_be_valid,
 int main(int argc, const char *argv[]) {
   printf("avrtmon - Packet Interface Test Unit\n\n");
   packet_t _p, *p = &_p;
-  //uint8_t p_raw = (uint8_t*) p;
 
+  /* Debug info which has been used for the unit test itself
   // Print dimensions of data structures
   printf("sizeof packet        -> %d bytes\n", sizeof(_p));
   printf("sizeof packet header -> %d bytes\n", (void*)(&(p->data)) - (void*)p);
@@ -45,6 +45,7 @@ int main(int argc, const char *argv[]) {
   printf("Address of packet      -> %p\n", p);
   printf("Address of packet data -> %p\n", &(p->data));
   putchar('\n');
+  */
 
   // Mock data message to perform tests
   const char *data = "Ho tante noci";

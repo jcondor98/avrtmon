@@ -3,15 +3,17 @@
 // Paolo Lucchesi - Test Unit
 #include <stdio.h>
 #include "test_framework.h"
+#include "nvm_mock.h"
 
 #include "temperature.h"
-#include "nvm_mock.h"
 
 
 #define TEST_ITEMS_MAX 3  // Avoid long iterations for repetitive tests
 
 int main(int argc, const char *argv[]) {
   printf("avrtmon - Temperature Database Test Unit\n\n");
+
+  /* Debug info which has been used for the unit test itself
   printf("NVM image address    -> %p\n", nvm_image);
   printf("NVM image dimension  -> %d\n", NVM_IMAGE_FULL_SIZE);
   printf("config_t size        -> %d\n", sizeof(nvm_image->config));
@@ -20,13 +22,14 @@ int main(int argc, const char *argv[]) {
   printf("TEMP_DB_CAPACITY     -> %d\n", TEMP_DB_CAPACITY);
   printf("NVM base address     -> %p\n", nvm);
   printf("NVM limit address    -> %p\n", NVM_LIMIT);
+  printf("sizeof(temperature_db_t) -> %d\n", sizeof(temperature_db_t));
+  */
 
 
   const id_t test_items_limit =
     TEST_ITEMS_MAX < TEMP_DB_CAPACITY ? TEST_ITEMS_MAX : TEMP_DB_CAPACITY;
   printf("Test items limit -> %d\n", test_items_limit);
 
-  printf("sizeof(temperature_db_t) -> %d\n", sizeof(temperature_db_t));
   putchar('\n');
 
 

@@ -13,9 +13,10 @@
 uint8_t packet_craft(packet_type_t type, const uint8_t *data, uint8_t data_size,
                      packet_t *dest) {
 
-  // Sanitize passed parameters
-  if ((type == PACKET_TYPE_ACK && type == PACKET_TYPE_ERR) || !dest || !data ||
-      data_size == 0 || data_size > PACKET_DATA_MAX_SIZE)
+  // Check against malformed parameters
+  if (type == PACKET_TYPE_ACK || type == PACKET_TYPE_ERR ||
+      type > PACKET_TYPE_COUNT || !dest || !data || data_size == 0 ||
+      data_size > PACKET_DATA_MAX_SIZE)
     return 1;
 
   // ID of the packet to be crafted

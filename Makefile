@@ -94,7 +94,7 @@ test_packet: $(addprefix $(OBJDIR)/, crc.o packet.o)
 
 test_temperature:
 	$(call test_config_gen)
-	$(call host_test, $(SRCDIR)/avr/temperature.c tests/mock_nvm.c $(SRCDIR)/nvm.c)
+	$(call host_test, $(SRCDIR)/avr/temperature.c tests/mock_nvm.c tests/nvm.c)
 	$(call test_config_clean)
 
 test_config:
@@ -119,11 +119,11 @@ test:
 	@make -s test_packet
 	@make -s test_config
 	@make -s test_temperature
-	@make -s test_shell
+	#@make -s test_shell
 	@make -s test_list
 
 # Standard make PHONY rules
-.PHONY:	clean all config_gen
+.PHONY:	clean all config_gen test
 
 clean:	
 	rm -f $(OBJDIR)/../{avr,host}/**/*.o $(BINS) tests/bin/* \

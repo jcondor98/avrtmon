@@ -8,6 +8,10 @@ CFLAGS := -Wall --std=c99 -O2 -funsigned-bitfields -fshort-enums \
   -Wstrict-prototypes -I$(INCDIR)/host -I$(INCDIR)
 TESTFLAGS := -Itests/include -I$(INCDIR)/avr -DAVR -DTEST -ggdb -Wno-format
 
+TARGET := target/host/avrtmon
+$(TARGET): $(OBJECTS)
+	make -s config_gen
+	$(CC) $(CFLAGS) -o $@ $^
 
 # Host-side testing canned recipe
 define host_test =

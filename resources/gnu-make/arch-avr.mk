@@ -7,15 +7,16 @@ CC := avr-gcc
 AS := avr-gcc
 CFLAGS := -Wall --std=c99 -DF_CPU=16000000UL -O3 -funsigned-char \
 		-funsigned-bitfields  -fshort-enums -Wstrict-prototypes \
-		-mmcu=atmega2560 -I$(INCDIR) -I$(INCDIR)/avr -DAVR -D__AVR_3_BYTE_PC__
+		-mmcu=atmega2560 -I$(INCDIR)/avr -I$(INCDIR) -DAVR -D__AVR_3_BYTE_PC__
 ASFLAGS := -x assembler-with-cpp $(CFLAGS)
+
+OBJECTS += $(patsubst sources/avr/commands/%.c, $(OBJDIR)/commands/%.o, $(wildcard sources/avr/commands/*.c))
 
 AVRDUDE := avrdude
 # com1 = serial port. Use lpt1 to connect to parallel port.
 AVRDUDE_PORT := /dev/ttyACM0    # programmer connected to serial device
 AVRDUDE_CONFIG != find /usr/share/arduino/hardware -name avrdude.conf
 
-AVRDUDE_WRITE_FLASH := -U flash:w:$(TARGET):i
 AVRDUDE_FLAGS := -p m2560 -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROGRAMMER) -b 115200
 AVRDUDE_FLAGS += $(AVRDUDE_NO_VERIFY)
 AVRDUDE_FLAGS += $(AVRDUDE_VERBOSE)
@@ -23,11 +24,26 @@ AVRDUDE_FLAGS += $(AVRDUDE_ERASE_COUNTER)
 AVRDUDE_FLAGS += -D -q -V -C $(AVRDUDE_CONFIG)
 AVRDUDE_FLAGS += -c wiring
 
+# Use these as functions
+avrdude_write_flash = -U flash:w:$(1).hex:i
+avrdude_write_eeprom = -U eeprom:w:$(1).eep:i
+
+
+OBJECTS += $(patsubst sources/avr/commands/%.c, $(OBJDIR)/commands/%.o, $(wildcard sources/avr/commands/*.c))
+
 
 # AVR-specific binaries recipes
-%.elf:	%.o $(OBJECTS)
-	$(CC) $(CFLAGS) -o $@ $< $(OBJECTS) $(LIBS)
+%.elf:	$(OBJECTS)
+	@echo Objects to compile: $(OBJECTS)
+	$(CC) $(CFLAGS) -o $@ $^
 
-%.hex:	%.elf
+%.eep:	%.elf
+	avr-objcopy -j .eeprom --set-section-flags=.eeprom="alloc,load" \
+	  --change-section-lma .eeprom=0 --no-change-warnings -O ihex $< $@ || exit 1
+
+%.hex:	%.eep %.elf
 	avr-objcopy -O ihex -R .eeprom $< $@
-	$(AVRDUDE) $(AVRDUDE_FLAGS) -U flash:w:$@:i #$(AVRDUDE_WRITE_EEPROM) 
+	$(AVRDUDE) $(AVRDUDE_FLAGS) -U $(call avrdude_write_flash $@) \
+	  $(call avrdude_write_eeprom $<)
+
+TARGET := target/avr/avrtmon.elf

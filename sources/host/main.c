@@ -5,10 +5,11 @@
 #include "shell.h"
 
 
-// Import shell commands
+// Import shell commands and specific utlity functions
 extern shell_command_t *shell_commands;
 extern size_t shell_commands_count;
 extern void *shell_storage_new(void);
+extern void shell_cleanup(shell_t *s);
 
 
 int main(int argc, const char *argv[]) {
@@ -27,6 +28,7 @@ int main(int argc, const char *argv[]) {
   shell_t *shell = shell_new("avrtmon> ", shell_commands,
       shell_commands_count, shell_storage);
   shell_launch(shell);
+  shell_cleanup(shell);
   shell_delete(shell);
 
   return 0;

@@ -25,8 +25,8 @@ AVRDUDE_FLAGS += -D -q -V -C $(AVRDUDE_CONFIG)
 AVRDUDE_FLAGS += -c wiring
 
 # Use these as functions
-avrdude_write_flash = -U flash:w:$(1).hex:i
-avrdude_write_eeprom = -U eeprom:w:$(1).eep:i
+avrdude_write_flash = -U flash:w:$(strip $(1)):i
+avrdude_write_eeprom = -U eeprom:w:$(strip $(1)):i
 
 
 OBJECTS += $(patsubst sources/avr/commands/%.c, $(OBJDIR)/commands/%.o, $(wildcard sources/avr/commands/*.c))
@@ -42,8 +42,11 @@ OBJECTS += $(patsubst sources/avr/commands/%.c, $(OBJDIR)/commands/%.o, $(wildca
 	  --change-section-lma .eeprom=0 --no-change-warnings -O ihex $< $@ || exit 1
 
 %.hex:	%.eep %.elf
-	avr-objcopy -O ihex -R .eeprom $< $@
-	$(AVRDUDE) $(AVRDUDE_FLAGS) -U $(call avrdude_write_flash $@) \
-	  $(call avrdude_write_eeprom $<)
+	avr-objcopy -O ihex -R .eeprom $(patsubst %.hex, %.elf, $@) $@
+	$(AVRDUDE) $(AVRDUDE_FLAGS) $(call avrdude_write_flash, $@) \
+	  $(call avrdude_write_eeprom, $(patsubst %.hex, %.eep, $@))
+
+flash:
+	make target/avr/avrtmon.hex
 
 TARGET := target/avr/avrtmon.elf

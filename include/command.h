@@ -12,23 +12,24 @@
 
 // Command id data type definition
 // i.e. All the different executable commands
-#define COMMAND_COUNT 4
+#define COMMAND_COUNT 5
 typedef enum COMMAND_ID_E {
   CMD_CONFIG_GET_FIELD,
   CMD_CONFIG_SET_FIELD,
   CMD_TEMPERATURES_DOWNLOAD,
-  CMD_TEMPERATURES_RESET
+  CMD_TEMPERATURES_RESET,
+  CMD_ECHO
 } command_id_t;
 
 // Command payload transported via CMD packet from host to AVR
 typedef struct _command_payload_s {
-  command_id_t id;
+  uint8_t id;     // Require a fixed size
   uint8_t arg[];  // This can be casted to any required type for a specific cmd
 } command_payload_t;
 
 // Command payload argument: set a configuration field to an arbitrary value
 typedef struct _config_setter_s {
-  config_field_t id;
+  uint8_t id;
   uint8_t value[];
 } config_setter_t;
 

@@ -5,7 +5,7 @@
 # Host Compiler setup
 CC := gcc
 CFLAGS := -Wall --std=c99 -O2 -funsigned-bitfields -fshort-enums \
-  -Wstrict-prototypes -I$(INCDIR)/host -I$(INCDIR)
+  -Wstrict-prototypes -I$(INCDIR)/host -I$(INCDIR) -DDEBUG
 TESTFLAGS := -Itests/include -I$(INCDIR)/avr -DAVR -DTEST -ggdb -Wno-format
 
 TARGET := target/host/avrtmon

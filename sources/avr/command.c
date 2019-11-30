@@ -14,6 +14,7 @@ extern command_t *cmd_config_get_field;
 extern command_t *cmd_config_set_field;
 extern command_t *cmd_temperatures_download;
 extern command_t *cmd_temperatures_reset;
+extern command_t *cmd_echo;
 
 
 // Execute a command, given its ID and an optional argument
@@ -35,4 +36,5 @@ void command_init(void) {
   cmd_table[CMD_CONFIG_SET_FIELD]      = cmd_config_set_field;
   cmd_table[CMD_TEMPERATURES_DOWNLOAD] = cmd_temperatures_download;
   cmd_table[CMD_TEMPERATURES_RESET]    = cmd_temperatures_reset;
+  cmd_table[CMD_ECHO]                  = cmd_echo;
 }

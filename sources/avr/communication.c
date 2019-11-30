@@ -29,10 +29,15 @@ uint8_t _rx_pack_busy_wait(void) {
   uint8_t available = serial_rx_available();
   uint8_t type = rx_pack.type;
 
+  // Early check against bad packet types
+  if (type > PACKET_TYPE_COUNT)
+    return 1;
+
   // If the packet is single-byte, return immediately
   if (type == PACKET_TYPE_HND || type == PACKET_TYPE_ERR ||
       type == PACKET_TYPE_ACK)
     return 0;
+
 
   // Wait for the entire header to arrive
   while (available < 2)
@@ -73,8 +78,9 @@ void com_handler(void) {
     // Execute the operation for the packet to process -- If the packet type is
     // not supported by the opmode in use, fallback to the default one
     packet_type_t type = rx_pack.type;
-    com_ack((const packet_t*) rx_buf);
-    if (type < PACKET_TYPE_COUNT && opmode[type])
+    if (type != PACKET_TYPE_ACK && type != PACKET_TYPE_ERR)
+      com_ack((const packet_t*) rx_buf);
+    if (opmode[type])
       opmode[type]((const packet_t*) rx_buf);
     else
       opmode_default[type]((const packet_t*) rx_buf);
@@ -97,7 +103,11 @@ void com_opmode_restore(void) {
 
 // Send the packet that is currently loaded in 'tx_pack'
 static inline uint8_t _com_send(void) {
-  return serial_tx(tx_buf, tx_pack.size);
+  uint8_t size;
+  if (tx_pack.type == PACKET_TYPE_ACK || tx_pack.type == PACKET_TYPE_ERR)
+    size = 1;
+  else size = tx_pack.size;
+  return serial_tx(tx_buf, size);
 }
 
 // Send a packet

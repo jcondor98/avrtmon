@@ -56,4 +56,9 @@ uint8_t packet_ack_by_id(uint8_t id);
 uint8_t packet_err(const packet_t*);
 uint8_t packet_err_by_id(uint8_t id);
 
+// Print out a complete representation of a packet
+#if defined(TEST) || !defined(AVR)
+void packet_print(const packet_t *packet);
+#endif
+
 #endif    // __PACKET_LAYER_H

@@ -101,7 +101,6 @@ test_serial: tests/serial_test.hex
 	# TODO: Provide also 'serial.o' object file
 
 # Perform all tests in a stroke
-test: CFLAGS := $(TESTFLAGS) $(CFLAGS)
 test:
 	@make -s test_crc
 	@make -s test_packet

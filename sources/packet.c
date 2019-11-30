@@ -4,8 +4,9 @@
 // Paolo Lucchesi - Sat 03 Aug 2019 12:33:20 PM CEST
 #include "packet.h"
 
-#ifdef TEST
+#if defined(TEST) || !defined(AVR)
 #include <stdio.h>
+#include <ctype.h>
 #endif
 
 // Craft a packet (which is preallocated as 'dest')
@@ -15,22 +16,20 @@ uint8_t packet_craft(packet_type_t type, const uint8_t *data, uint8_t data_size,
 
   // Check against malformed parameters
   if (type == PACKET_TYPE_ACK || type == PACKET_TYPE_ERR ||
-      type > PACKET_TYPE_COUNT || !dest || !data || data_size == 0 ||
+      type > PACKET_TYPE_COUNT || !dest || (!data && data_size != 0) ||
       data_size > PACKET_DATA_MAX_SIZE)
     return 1;
 
   // ID of the packet to be crafted
   static uint8_t id = 0;
 
-#ifndef AVR  // HND packet shall be sent only by the host to the tmon
-  // If the packet is single-byte, craft it and return immediately
+  // Treat a handshake specially
   if (type == PACKET_TYPE_HND) {
     dest->type = PACKET_TYPE_HND;
     dest->id = 0;
     id = 1;
     return 0;
   }
-#endif
 
   // Initialize header
   dest->type = type;
@@ -123,24 +122,28 @@ uint8_t packet_header_size(const packet_t *packet) {
 
 
 
-// [TEST] Print out a complete representation of a packet
-#ifdef TEST
+// Print out a complete representation of a packet
+#if defined(TEST) || !defined(AVR)
 void packet_print(const packet_t *packet) {
   if (!packet) {
     printf("Pointer to packet is NULL\n");
     return;
   }
 
-  static const char type_str[][4] = { "DAT", "CMD", "ACK", "ERR" };
+  static const char type_str[PACKET_TYPE_COUNT][4] = {
+    "HND", "ACK", "ERR", "CMD", "CTR", "DAT" };
   printf("Printing packet\n"
          "Type: %s\n"
          "ID  : %d\n"
          "Size: %d\n",
       type_str[packet->type], packet->id, packet->size);
 
-  for (uint8_t i=0; i < packet->size; ++i)
-    putchar(packet->data[i]);
-  putchar('\n');
-  // TODO: Print out CRC
+  for (uint8_t i=0; i < packet->size - 1; ++i) {
+    if (isprint(packet->data[i]))
+      putchar(packet->data[i]);
+    else printf(" 0x%hhx ", packet->data[i]);
+  }
+
+  printf("\nCRC: %hhx\n", packet->data[packet->size]);
 }
 #endif

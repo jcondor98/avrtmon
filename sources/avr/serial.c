@@ -32,9 +32,6 @@ void serial_init(void) {
 	// Enable TX and RX (i.e. duplex communication)
     // RX and UDRE interrupts are enabled dynamically by 'serial_*x'
 	UCSR0B = (1 << RXEN0) | (1 << TXEN0);
-
-    // Enable global interrupts
-	sei();
 }
 
 

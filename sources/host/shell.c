@@ -5,7 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "shell.h"
+
+#include "host/shell.h"
+#include "host/debug.h"
 
 
 // Maximum length for a shell input line
@@ -20,6 +22,9 @@ static int cmdcmp(const void *c1, const void *c2);
 
 // [AUX] Retrieve a shell command given its name
 static shell_command_t *shell_command_get(const shell_t *shell, const char *name);
+
+// [DEBUG] Print informations about a given shell
+void shell_print(const shell_t *shell);
 
 
 // Create a new shell object, given a prompt and and a command array
@@ -50,6 +55,7 @@ shell_t *shell_new(const char *prompt, const shell_command_t *commands,
   shell->commands_count = commands_count;
   shell->storage = storage;
 
+  debug shell_print(shell);
   return shell;
 
 
@@ -113,10 +119,7 @@ void shell_launch(shell_t *shell) {
       else if (argc == 2) {
         shell_command_t *cmd = shell_command_get(shell, argv[1]);
         if (cmd) {
-          if (cmd->help) {
-            fputs(cmd->help, stdout);
-            putchar('\n');
-          }
+          if (cmd->help) puts(cmd->help);
           else printf("No help for command %s\n", cmd->name);
         }
         else printf("Unknown command: %s\n", argv[1]);
@@ -133,7 +136,8 @@ void shell_launch(shell_t *shell) {
       shell_command_t *cmd = shell_command_get(shell, argv[0]);
       if (cmd) {
         int ret = cmd->exec(argc, argv, shell->storage);
-        if (ret != 0)
+        if (ret == 1) puts(cmd->help);  // i.e. command syntax error
+        debug if (ret != 0)
           fprintf(stderr, "Command '%s' exited with status %d\n", cmd->name, ret);
       }
       else printf("Command not found: %s\n", argv[0]);
@@ -144,9 +148,8 @@ void shell_launch(shell_t *shell) {
   }
 
   // User exited, print the exit message and return
-  fputs("\nSaluta Andonio\n", stdout);
+  puts("\nSaluta Andonio");
 }
-
 
 
 // [AUX] Comparator for commands name to sort the commands array of the shell
@@ -164,3 +167,27 @@ static shell_command_t *shell_command_get(const shell_t *shell, const char *name
   return bsearch(&cmd_dummy, shell->commands, shell->commands_count,
       sizeof(shell_command_t), cmdcmp);
 }
+
+
+#ifdef DEBUG
+// [DEBUG] Print informations about a given shell
+void shell_print(const shell_t *shell) {
+  puts("\nPrinting shell");
+  if (!shell) {
+    printf("Shell pointer is NULL");
+    return;
+  }
+
+  printf("Prompt: %s\n", shell->prompt);
+  printf("Storage: %s\n", shell->storage ? "Present" : "Absent");
+  printf("Commands number: %zu\n", shell->commands_count);
+
+  if (shell->commands_count) {
+    puts("Commands:\n");
+    for (size_t i=0; i < shell->commands_count; ++i)
+      printf("  - %s\n", shell->commands[i].name);
+  }
+
+  putchar('\n');
+}
+#endif

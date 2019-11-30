@@ -319,6 +319,7 @@ int tmon_config(int argc, char *argv[], void *storage) {
 // CMD: tmon-echo
 // Usage: tmon-echo <arg> [arg2 arg3 ...]
 // Send a string to the tmon, which should send it back
+// TODO: Receive a ACK packet
 int tmon_echo(int argc, char *argv[], void *storage) {
   _storage_cast(st, storage);
   if (argc < 2) return 1;

@@ -78,13 +78,6 @@ int serial_craft_and_send(packet_type_t type, const void *data,
   // Craft the packet -- For HND packet, the 'size' field is set, but not sent
   packet_t p;
   switch (type) {
-    // HND is a single-byte packet
-    case PACKET_TYPE_HND:
-      packet_craft(PACKET_TYPE_HND, NULL, 0, &p);
-      assert(p.type == PACKET_TYPE_HND);
-      p.size = 1;
-      break;
-
     // ACK and ERR are not supported in this context
     case PACKET_TYPE_ACK:
     case PACKET_TYPE_ERR:
@@ -128,20 +121,12 @@ int serial_recv(int dev_fd, packet_t *dest) {
   if (!dest || dev_fd < 0) return 1;
 
   // Get first byte of the header
-  _read(dev_fd, (void*) dest, 1);
+  _read(dev_fd, (void*) dest, PACKET_HEADER_SIZE);
 
-  // If the packet is not a single-byte one, get the size
-  switch (dest->type) {
-    case PACKET_TYPE_HND:
-    case PACKET_TYPE_ACK:
-    case PACKET_TYPE_ERR:
-      return 0;
-    default:
-      // Trick here: take the address of the second byte of the header
-      _read(dev_fd, ((unsigned char*) dest) + 1, 1);
-      for (int i=0; i < dest->size - PACKET_HEADER_SIZE; ++i)
-        _read(dev_fd, &dest->data[i], 1);
-  }
+  // If the packet brings data, get it
+  uint8_t dest_data_size = dest->size - PACKET_HEADER_SIZE;
+  if (packet_brings_data(dest) && dest_data_size)
+    _read(dev_fd, dest->data, dest_data_size);
 
   debug {
     printf("\nReceived packet\n");

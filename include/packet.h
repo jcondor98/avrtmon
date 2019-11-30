@@ -42,19 +42,29 @@ uint8_t packet_craft(packet_type_t type, const uint8_t *data, uint8_t size,
 // Returns 0 if the header is sane, 1 if it is corrupted
 uint8_t packet_check_header(const packet_t*);
 
+// Compute the packet header parity bit
+// Returns the even parity bit (1 if data bits sum is odd, 0 if even)
+// Also works as a check, must return 0 (i.e. bits are even) if the packet
+// header is not corrupted by a single bit flip
+uint8_t packet_header_parity(const packet_t *packet);
+
 // Check an entire packet via CRC 
 // Returns 0 if the packet is sane, 1 if it is corrupted
 uint8_t packet_check_crc(const packet_t*);
 
 // Acknowledge a packet, passing the packet itself or its id
-// Return a byte representing the entire ACK packet to send, without side effect
-uint8_t packet_ack(const packet_t*);
-uint8_t packet_ack_by_id(uint8_t id);
+// Returns 0 on success, 1 otherwise
+uint8_t packet_ack(const packet_t*, packet_t *dest);
+uint8_t packet_ack_by_id(uint8_t id, packet_t *dest);
 
 // Send an error packet (relative to a packet or a packet id)
-// Return a byte representing the entire ERR packet to send, without side effect
-uint8_t packet_err(const packet_t*);
-uint8_t packet_err_by_id(uint8_t id);
+// Returns 0 on success, 1 otherwise
+uint8_t packet_err(const packet_t*, packet_t *dest);
+uint8_t packet_err_by_id(uint8_t id, packet_t *dest);
+
+// Return 1 if the packet can bring data, 0 otherwise (i.e. ACK/ERR/HND)
+uint8_t packet_brings_data(const packet_t *p);
+
 
 // Print out a complete representation of a packet
 #if defined(TEST) || !defined(AVR)

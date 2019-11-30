@@ -15,16 +15,9 @@ typedef enum PACKET_VALIDITY_E {
 } packet_validity_t;
 
 
-// Inspect a packet - Source code is located in 'sources/packet.c'
-void packet_print(const packet_t *packet);
-
 // Parameterized test of 'packet_craft()'
 static void test_params(packet_validity_t params_are_valid, packet_type_t type,
     const void *data, uint8_t data_size, packet_t *dest);
-
-// Test a "Single-Byte Packet" (i.e. ACK or ERR)
-static void test_sbp(const packet_t *packet,
-    packet_type_t type, uint8_t expected);
 
 // Test packet integrity
 static void test_packet_integrity(packet_validity_t should_be_valid,
@@ -71,14 +64,13 @@ int main(int argc, const char *argv[]) {
   test_params(PACKET_VALID, PACKET_TYPE_DAT, data, data_size, p);
 
 
-  // Test acknowledgement and error packets
-  // We assing a non-zero id to the packet which was previously crafted
-  // Expected values were manually calculated
-  printf("\nTesting Single Byte Packet functions\n");
-  _p.id = 0x03;
-  test_sbp(p, PACKET_TYPE_ACK, (uint8_t) 0x23);
-  test_sbp(p, PACKET_TYPE_ERR, (uint8_t) 0x33);
-
+  // Test packet header computing algorithm
+  memset(p, 0x00, PACKET_HEADER_SIZE);
+  test_expr(packet_header_parity(p) == 0,
+      "Packet header computing algorithm should work when bits are even");
+  p->header_par = 1;
+  test_expr(packet_header_parity(p) != 0,
+      "Packet header computing algorithm should work when bits are odd");
 
   // Test packet integrity checking
   packet_craft(PACKET_TYPE_DAT, (void*) data, data_size, p);
@@ -129,38 +121,6 @@ static void test_params(packet_validity_t params_are_valid, packet_type_t type,
     packet_print(dest);
 }
 
-
-// Test a "Single-Byte Packet" (i.e. ACK or ERR)
-static void test_sbp(const packet_t *packet, packet_type_t type,
-    uint8_t expected) {
-
-  uint8_t (*sbp_by_id)(uint8_t) =
-    type == PACKET_TYPE_ACK ? packet_ack_by_id : packet_err_by_id;
-
-  uint8_t (*sbp)(const packet_t*) =
-    type == PACKET_TYPE_ACK ? packet_ack : packet_err;
-
-  const char *type_str = type == PACKET_TYPE_ACK ? "ack" : "err";
-  uint8_t computed_sbp = sbp(packet);
-  uint8_t computed_sbp_by_id = sbp_by_id(packet->id);
-
-  test_expr(computed_sbp_by_id,
-    "packet_%s_by_id returned value should match the expected one", type_str);
-  printf("%3s packet value: 0x%x\n", type_str, computed_sbp_by_id);
-  printf("Expected value  : 0x%x\n", expected);
-
-  test_expr(computed_sbp,
-    "packet_%s returned value should match the expected one", type_str);
-  printf("%3s packet value: 0x%x\n", type_str, computed_sbp);
-  printf("Expected value  : 0x%x\n", expected);
-
-  int expr = computed_sbp == computed_sbp_by_id;
-  test_expr(expr,
-      "%s function and its by-id equivalent %s return the same value",
-      type_str, expr ? "do" : "do not");
-
-  putchar('\n');
-}
 
 // Test packet integrity
 static void test_packet_integrity(packet_validity_t should_be_valid,

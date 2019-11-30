@@ -27,21 +27,15 @@ static com_opmode_t opmode = opmode_default;
 // Returns 0 if the packet is sane, 1 if it is corrupted
 uint8_t _rx_pack_busy_wait(void) {
   uint8_t available = serial_rx_available();
-  uint8_t type = rx_pack.type;
-
-  // Early check against bad packet types
-  if (type > PACKET_TYPE_COUNT)
-    return 1;
-
-  // If the packet is single-byte, return immediately
-  if (type == PACKET_TYPE_HND || type == PACKET_TYPE_ERR ||
-      type == PACKET_TYPE_ACK)
-    return 0;
 
 
   // Wait for the entire header to arrive
   while (available < 2)
     available = serial_rx_available();
+
+  uint8_t type = rx_pack.type;
+  if (type > PACKET_TYPE_COUNT)  // Early check against bad packet types
+    return 1;
 
   // Check the packet header integrity
   if (packet_check_header((void*) rx_buf) != 0) {
@@ -49,14 +43,16 @@ uint8_t _rx_pack_busy_wait(void) {
    return 1;
   }
 
-  // Wait for all the bytes to be received
-  uint8_t size = rx_pack.size;
-  while (available < size)
-    available = serial_rx_available();
+  if (packet_brings_data((const packet_t*) rx_buf)) {
+    // Wait for all the bytes to be received
+    uint8_t size = rx_pack.size;
+    while (available < size)
+      available = serial_rx_available();
 
-  // Check the packet against its CRC
-  if (packet_check_crc((void*) rx_buf) != 0)
-    return 1;
+    // Check the packet against its CRC
+    if (packet_check_crc((void*) rx_buf) != 0)
+      return 1;
+  }
 
   return 0; // Success
 }
@@ -129,15 +125,13 @@ void com_craft_and_send(packet_type_t type, const uint8_t *data,
 
 // Acknowledge a received packet
 void com_ack(const packet_t *pack) {
-  tx_pack.id = pack->id;
-  tx_pack.type = PACKET_TYPE_ACK;
+  packet_ack(pack, &tx_pack);
   _com_send();
 }
 
 // Raise an error for a received packet
 void com_err(const packet_t *pack) {
-  tx_pack.id = pack->id;
-  tx_pack.type = PACKET_TYPE_ERR;
+  packet_err(pack, &tx_pack);
   _com_send();  // Just resend the just sent packet
 }
 

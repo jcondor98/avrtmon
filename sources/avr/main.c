@@ -35,7 +35,7 @@ int main(int argc, const char *argv[]) {
   // Initialize all modules
   //config_fetch();
   //temperature_init();
-  //command_init();
+  command_init();
   //buttons_init();
   com_init();
   led_init();

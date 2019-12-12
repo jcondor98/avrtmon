@@ -16,6 +16,7 @@
 #include "packet.h"
  
 #define BAUD_RATE B57600
+#define CONSECUTIVE_ERRORS_THRESHOLD 10
 
 
 // [AUX] Write a buffer to the serial port, one byte at a time (blocking)
@@ -36,8 +37,8 @@ int serial_open(const char *dev) {
 
   // Setup serial device
   dev_io.c_cflag     = CS8 | CREAD | CLOCAL;
-  dev_io.c_cc[VMIN]  = 1;
-  dev_io.c_cc[VTIME] = 5;
+  dev_io.c_cc[VMIN]  = 0;   // Never make read() calls indefinitely blocking
+  dev_io.c_cc[VTIME] = 30;  // Wait at most 3 seconds between characters
 
   // Open the device file
   dev_fd = open(dev, O_RDWR);
@@ -75,7 +76,7 @@ int serial_craft_and_send(packet_type_t type, const void *data,
       data_size > PACKET_DATA_MAX_SIZE || dev_fd < 0)
     return 1;
 
-  // Craft the packet -- For HND packet, the 'size' field is set, but not sent
+  // Handle packet creation given its type
   packet_t p;
   switch (type) {
     // ACK and ERR are not supported in this context
@@ -89,16 +90,19 @@ int serial_craft_and_send(packet_type_t type, const void *data,
       break;
   }
 
-  debug packet_print(&p);
+  debug {
+    puts("Crafted a new packet to send");
+    packet_print(&p);
+  }
 
   // Continously send the packet until an ACK response is received
-  while (1) {
+  for (unsigned i=0; i <= CONSECUTIVE_ERRORS_THRESHOLD; ++i) {
     packet_t res;  // Response packet
 
     // Send the packet, exiting on error
     if (_write(dev_fd, (void*) &p, p.size) != 0)
       return 1;
-    puts("Packet was sent");
+    debug puts("Packet was sent");
 
     // Receive the response
     serial_recv(dev_fd, &res);
@@ -106,17 +110,19 @@ int serial_craft_and_send(packet_type_t type, const void *data,
       printf("Response received\n");
       packet_print(&res);
     }
-    if (res.type == PACKET_TYPE_ACK) break;
+    if (res.type == PACKET_TYPE_ACK) return 0;
     else if (res.type != PACKET_TYPE_ERR) // Error: unexpected packet type
       return 1;
   }
 
-  return 0;
+  fputs("Error: Too many consecutive errors while receiving package\n", stderr);
+  return 1;
 }
 
 
 // Receive a packet from the tmon, storing it into dest
 // Returns 0 on success, 1 otherwise
+// TODO: Add error checking
 int serial_recv(int dev_fd, packet_t *dest) {
   if (!dest || dev_fd < 0) return 1;
 
@@ -170,13 +176,19 @@ int _write(int fd, unsigned char *buf, size_t nbytes) {
 
 // [AUX] Read from the serial port, one byte at a time (blocking)
 int _read(int fd, unsigned char *buf, size_t nbytes) {
-  for (size_t i=0; i < nbytes; ++i) {
-    int ret;
-    while ((ret = read(fd, buf + i, 1)) <= 0)
-      if (ret < 0 && errno != EINTR) {
-        perror(__func__);
-        return 1;
+  for (ssize_t bytes_read = 0; bytes_read < nbytes; ++bytes_read) {
+    ssize_t ret = read(fd, buf, nbytes) == nbytes ? 0 : 1;
+    if (ret < 0)
+      switch (errno) {
+        case EINTR: continue;
+        case EAGAIN:
+          fputs("Error: timeout was reached for reading data", stderr);
+          return 1;
+        default:
+          perror(__func__);
+          return 1;
       }
+    else bytes_read += ret;
   }
   return 0;
 }

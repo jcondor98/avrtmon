@@ -88,6 +88,7 @@ int connect(int argc, char *argv[], void *storage) {
     return 2;
   }
 
+  // TODO: Use fprintf instead of perror
   int tmon_fd = serial_open(argv[1]);
   if (tmon_fd < 0) {
     perror("Unable to connect to the tmon");

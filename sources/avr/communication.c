@@ -22,12 +22,15 @@ static com_operation_f opmode_default[];
 static com_opmode_t opmode = opmode_default;
 
 
+// Start receiving a packet, storing it in 'rx_pack'
+#define com_recv() serial_rx(rx_buf, sizeof(packet_t))
+
+
 // Busy wait for each byte of a packet
 // It is assumed that at least a byte of the packet is already available
 // Returns 0 if the packet is sane, 1 if it is corrupted
 uint8_t _rx_pack_busy_wait(void) {
   uint8_t available = serial_rx_available();
-
 
   // Wait for the entire header to arrive
   while (available < 2)
@@ -83,7 +86,7 @@ void com_handler(void) {
   }
 
   // Before returning, start waiting for another packet
-  serial_rx(rx_buf, sizeof(packet_t));
+  com_recv();
 }
 
 
@@ -99,22 +102,22 @@ void com_opmode_restore(void) {
 
 // Send the packet that is currently loaded in 'tx_pack'
 static inline uint8_t _com_send(void) {
-  uint8_t size;
-  if (tx_pack.type == PACKET_TYPE_ACK || tx_pack.type == PACKET_TYPE_ERR)
-    size = 1;
-  else size = tx_pack.size;
-  return serial_tx(tx_buf, size);
+  return serial_tx(tx_buf, tx_pack.size);
 }
 
 // Send a packet
 void com_send(const packet_t *pack) {
   if (!pack) return;
-  memcpy(tx_buf, pack, sizeof(packet_t));
+  while (serial_tx_ongoing()) ;
+  memcpy(tx_buf, pack, pack->size);
   _com_send();
 }
 
 // Resend the last TX packet
-void com_resend(void) { _com_send(); }
+void com_resend(void) {
+  while (serial_tx_ongoing()) ;
+  _com_send();
+}
 
 // Send an in-place crafted packet
 void com_craft_and_send(packet_type_t type, const uint8_t *data,
@@ -138,7 +141,7 @@ void com_err(const packet_t *pack) {
 // Initialize the communication module
 void com_init(void) {
   serial_init();
-  serial_rx(rx_buf, sizeof(packet_t));
+  com_recv();
 }
 
 

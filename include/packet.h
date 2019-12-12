@@ -46,7 +46,7 @@ uint8_t packet_check_header(const packet_t*);
 // Returns the even parity bit (1 if data bits sum is odd, 0 if even)
 // Also works as a check, must return 0 (i.e. bits are even) if the packet
 // header is not corrupted by a single bit flip
-uint8_t packet_header_parity(const packet_t *packet);
+uint8_t packet_header_parity(const packet_t*);
 
 // Check an entire packet via CRC 
 // Returns 0 if the packet is sane, 1 if it is corrupted
@@ -63,12 +63,12 @@ uint8_t packet_err(const packet_t*, packet_t *dest);
 uint8_t packet_err_by_id(uint8_t id, packet_t *dest);
 
 // Return 1 if the packet can bring data, 0 otherwise (i.e. ACK/ERR/HND)
-uint8_t packet_brings_data(const packet_t *p);
+uint8_t packet_brings_data(const packet_t*);
 
 
 // Print out a complete representation of a packet
 #if defined(TEST) || !defined(AVR)
-void packet_print(const packet_t *packet);
+void packet_print(const packet_t*);
 #endif
 
 #endif    // __PACKET_LAYER_H

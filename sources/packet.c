@@ -12,7 +12,9 @@
 
 // [AUX] Attach the header parity bit to a packet
 static inline void attach_header_parity(packet_t *p) {
-  p->header_par = packet_header_parity(p) & ~(p->header_par);
+  //p->header_par = packet_header_parity(p) & ~(p->header_par);
+  p->header_par = 0;
+  p->header_par = packet_header_parity(p);
 }
 
 
@@ -53,7 +55,7 @@ uint8_t packet_craft(packet_type_t type, const uint8_t *data, uint8_t data_size,
   for (uint8_t i=0; i < data_size; ++i)
     dest->data[i] = data[i];
 
-  // Assign the CRC
+  // Attach the CRC
   crc_t *crc_p = (crc_t*)(dest->data + data_size);
   (*crc_p) = crc(dest, dest->size - sizeof(crc_t));
 
@@ -98,15 +100,13 @@ uint8_t packet_err(const packet_t *packet, packet_t *dest) {
 // Check an entire packet via CRC 
 // Returns 0 if the packet is sane, 1 if it is corrupted
 // It is assumed that the header is sane
-uint8_t packet_check_crc(const packet_t *packet) {
-  if (!packet) return 1;
+uint8_t packet_check_crc(const packet_t *p) {
+  if (!p) return 1;
 
   // By default, consider sane packets that do not have a CRC
-  if (packet->type == PACKET_TYPE_HND || packet->type == PACKET_TYPE_ACK ||
-      packet->type == PACKET_TYPE_ERR)
+  if (!packet_brings_data(p))
     return 0;
-
-  return (crc_check(packet, packet->size) != 0) ? 1 : 0;  // Check the CRC
+  return (crc_check(p, p->size) != 0) ? 1 : 0;
 }
 
 // Check the sanity of a packet header
@@ -116,7 +116,7 @@ uint8_t packet_check_header(const packet_t *packet) {
       (packet_brings_data(packet) || packet->size == 2) &&
       packet_header_parity(packet) == 0)
     return 0;
-  else return 1;
+  return 1;
 }
 
 
@@ -178,6 +178,8 @@ void packet_print(const packet_t *packet) {
          "ID  : %d\n"
          "Size: %d\n",
       type_str[packet->type], packet->id, packet->size);
+
+  if (!packet_brings_data(packet)) return;
 
   for (uint8_t i=0; i < packet->size - 1; ++i) {
     if (isprint(packet->data[i]))

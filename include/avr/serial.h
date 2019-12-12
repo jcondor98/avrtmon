@@ -15,8 +15,10 @@
 #define BAUD_RATE 57600
 #define UBRR_VALUE (F_CPU / 16 / BAUD_RATE - 1)
 
-// Transmission buffer size
-#define TX_BUFFER_SIZE 64
+// Transmission buffer size - Default is 128
+#ifndef TX_BUFFER_SIZE
+#define TX_BUFFER_SIZE 128
+#endif
 
 
 // Initialize the USART

@@ -14,10 +14,17 @@ volatile uint8_t rx_size = 0;
 volatile uint8_t rx_ongoing = 0;
 
 // TX variables
-volatile uint8_t tx_buffer[TX_BUFFER_SIZE]; // TODO: Resize to packet size
+volatile uint8_t tx_buffer[TX_BUFFER_SIZE];
 volatile uint8_t tx_to_transmit = 0;
 volatile uint8_t tx_transmitted = 0;
 volatile uint8_t tx_ongoing = 0;
+
+
+// Enable and disable RX and TX interrupts
+static inline void rx_sei(void) { UCSR0B |=   1 << RXCIE0 ; }
+static inline void tx_sei(void) { UCSR0B |=   1 << TXCIE0 ; }
+static inline void rx_cli(void) { UCSR0B &= ~(1 << RXCIE0); }
+static inline void tx_cli(void) { UCSR0B &= ~(1 << TXCIE0); }
 
 
 // Initialize the USART
@@ -39,38 +46,31 @@ void serial_init(void) {
 ISR(USART0_RX_vect) {
   if (rx_received < rx_size)
     rx_buffer[rx_received++] = UDR0;
-  if (rx_received >= rx_size) {  // Now 'rx_received' could be incremented
-    UCSR0B &= ~(1 << RXCIE0); // RX finished, disable RXC Interrupt
+  if (rx_received >= rx_size) // Now 'rx_received' could be incremented
     serial_rx_reset();
-  }
 }
 
 
 // TX Interrupt Service Routine
-ISR(USART0_UDRE_vect) {
-  UCSR0B &= ~(1 << UDRIE0); // Disable UDRE Interrupt
-  if (tx_transmitted < tx_to_transmit) {
+//ISR(USART0_UDRE_vect) {
+ISR(USART0_TX_vect) {
+  if (tx_transmitted < tx_to_transmit)
     UDR0 = tx_buffer[tx_transmitted++];
-    UCSR0B |= (1 << UDRIE0); // Enable UDRE Interrupt again
-  }
-  else
-    serial_tx_reset();
+  else serial_tx_reset();
 }
 
 
 // Receive at most 'size' bytes of data, storing them into an external buffer
 void serial_rx(volatile void *buf, uint8_t size) {
   if (!buf) return;
-  UCSR0B &= ~(1 << RXCIE0); // Disable RX Complete Interrupt
+  rx_cli();
 
   // Setup for receiving
   rx_buffer = buf;
   rx_received = 0;
   rx_size = size;
   rx_ongoing = 1;
-
-  // Enable RX Complete Interrupt
-  UCSR0B |= (1 << RXCIE0); // Enable RX Complete Interrupt
+  rx_sei();
 }
 
 
@@ -98,14 +98,13 @@ uint8_t serial_tx(const void *buf, uint8_t size) {
 
   // Actually send the data -- Send the first byte with busy waiting, the others
   // will be sent by the TX ISR
-  // TODO: Could deadlock happen here? If yes, how to prevent it?
   while (! (UCSR0A & (1 << UDRE0)))
     ;
   UDR0 = tx_buffer[0];
   tx_transmitted = 1;
 
-  // Enable UDR Emptied Interrupt
-  UCSR0B |= (1 << UDRIE0);
+  // Enable TX Interrupt
+  tx_sei();
 
   return 0;
 }
@@ -124,6 +123,7 @@ uint8_t serial_tx_ongoing(void) { return tx_ongoing; }
 
 // Reset indexes for receiving data from the serial
 void serial_rx_reset(void) {
+  rx_cli();
   rx_buffer = NULL;
   rx_size = 0;
   rx_ongoing = 0;
@@ -131,6 +131,7 @@ void serial_rx_reset(void) {
 
 // Reset indexes for transmitting data with the serial
 void serial_tx_reset(void) {
+  tx_cli();
   tx_to_transmit = 0;
   tx_transmitted = 0;
   tx_ongoing = 0;

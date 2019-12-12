@@ -126,13 +126,14 @@ static void test_params(packet_validity_t params_are_valid, packet_type_t type,
 static void test_packet_integrity(packet_validity_t should_be_valid,
     const packet_t *packet) {
 
-  uint8_t is_not_valid =
-    packet_check_header(packet) != 0 || packet_check_crc(packet) != 0;
+  unsigned char crc_check = packet_check_crc(packet);
+  unsigned char is_not_valid =
+    packet_check_header(packet) != 0 || crc_check != 0;
   int expr = should_be_valid ^ is_not_valid;
 
   test_expr(expr,
-      "Packet should %sbe valid (crc_check returned %d)",
-      is_not_valid ? "not " : "");
+      "Packet should %sbe valid (packet_check_crc returned %d)",
+      is_not_valid ? "not " : "", crc_check);
 
   if (!expr) packet_print(packet);
 }

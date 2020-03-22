@@ -3,9 +3,10 @@
 # Paolo Lucchesi
 
 # Host Compiler setup
+# TODO: Remove -ggdb, restore -std=c99
 CC := gcc
-CFLAGS := -Wall --std=c99 -O2 -funsigned-bitfields -fshort-enums \
-  -Wstrict-prototypes -I$(INCDIR)/host -I$(INCDIR) -DDEBUG
+CFLAGS := -Wall -std=gnu99 -O2 -funsigned-bitfields -fshort-enums \
+  -Wstrict-prototypes -I$(INCDIR)/host -I$(INCDIR) -DDEBUG -lrt -pthread -ggdb
 TESTFLAGS := -Itests/include -I$(INCDIR)/avr -DAVR -DTEST -ggdb -Wno-format
 
 TARGET := target/host/avrtmon
@@ -26,3 +27,7 @@ define host_test =
 	rm tests/bin/$@
 endef
 
+
+host_test_serial: $(OBJDIR)/ringbuffer.o $(OBJDIR)/serial.o
+	$(CC) $(CFLAGS) -o tests/bin/serial_host $^ tests/serial/host_test_serial.c
+	./tests/bin/serial_host

@@ -1,10 +1,10 @@
 // avrtmon
 // Program shell (i.e. command line) - Source file
 // Paolo Lucchesi - Thu 31 Oct 2019 02:31:26 AM CET
-#define _POSIX_C_SOURCE 200809L  // So we can use strdup() with ANSI C
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 #include "host/shell.h"
 #include "host/debug.h"
@@ -90,9 +90,24 @@ void shell_launch(shell_t *shell) {
   char *argv[SHELL_LINE_MAX_LEN / 2 + 1];
   int argc;
 
-  // Main shell loop -- Read an entire line inserted by the user
-  fputs(shell->prompt, stdout);
-  while (fgets(line, SHELL_LINE_MAX_LEN + 2, stdin)) {
+  // Main shell loop
+  fputs(shell->prompt, stdout); // Print first prompt
+  while (1) {
+    // Get a new input line
+    errno = 0; // fgets does not reset errno on a success consecutive to a failure
+    void *ret = fgets(line, SHELL_LINE_MAX_LEN + 2, stdin);
+    if (!ret) { // No line was read
+      if (feof(stdin)) break;   // EOF
+      else if (ferror(stdin)) { // fgets() failure (skip iteration)
+        if (errno != EINTR) perror(__func__);
+        continue;
+      }
+      else {
+        err_log("\nNo line was read but fgets() returned NULL");
+        continue;
+      }
+    }
+
     // Tokenize the line
     // Take the first token. If it is null (i.e. an empty line was inserted),
     // just skip the command, as a POSIX shell would do

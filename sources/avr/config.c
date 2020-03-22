@@ -5,12 +5,7 @@
 #include <stddef.h> // offsetof
 
 #include "config.h"
-
-#ifdef TEST
-#include "nvm_mock.h"
-#else
 #include "nvm.h"
-#endif
 
 
 // AVR-side stuff

@@ -38,4 +38,22 @@ void shell_delete(shell_t *shell);
 // Launch a shell - Blocks until the user exits
 void shell_launch(shell_t *shell);
 
+
+// Exit with an error from a shell command, printing a message
+// NOTE: Use only within a shell command!
+#define sh_error(err_msg, err_ret) do {\
+    fprintf(stderr, "%s: %s\n", argv[0], err_msg);\
+    return err_ret;\
+  }\
+} while (0)
+
+// Same as above, but print the error message and exit only if 'expr' is true
+#define sh_error_on(expr, err_msg, err_ret) do {\
+  if (expr) {\
+    fprintf(stderr, "%s: %s\n", argv[0], err_msg);\
+    return err_ret;\
+  }\
+} while (0)
+
+
 #endif    // __SHELL_MODULE_H

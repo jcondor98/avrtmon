@@ -7,188 +7,212 @@
 #include <string.h>
 #include <termios.h>
 #include <fcntl.h>
-//#include <sys/stat.h>
-#include <errno.h>
-#include <assert.h>
+#include <pthread.h>
+#include <time.h>
 
 #include "host/serial.h"
 #include "host/debug.h"
-#include "packet.h"
  
-#define BAUD_RATE B57600
-#define CONSECUTIVE_ERRORS_THRESHOLD 10
+
+#define ONE_MSEC 1000000
+#define context_isvalid(ctx)\
+  ((ctx) && (ctx)->dev_fd > 2 && isatty((ctx)->dev_fd))
 
 
-// [AUX] Write a buffer to the serial port, one byte at a time (blocking)
-int _write(int fd, unsigned char *buf, size_t nbytes);
-
-// [AUX] Read from the serial port, one byte at a time (blocking)
-int _read(int fd, unsigned char *buf, size_t nbytes);
+// Auxiliary functions -- Source code at the bottom of this source file
+static int _serial_rx_start(serial_context_t *ctx);
+static void _serial_rx_stop(serial_context_t *ctx);
 
 
 // Open a serial device
-// Returns an open file descriptor of the serial device, or -1 on error
-int serial_open(const char *dev) {
-  if (!dev || *dev == '\0') return -1;
-
-  // Termios struct and descriptor for the device to open
-  struct termios dev_io = { 0 };
-  int dev_fd;
-
-  // Setup serial device
-  dev_io.c_cflag     = CS8 | CREAD | CLOCAL;
-  dev_io.c_cc[VMIN]  = 0;   // Never make read() calls indefinitely blocking
-  dev_io.c_cc[VTIME] = 30;  // Wait at most 3 seconds between characters
+// On success, 0 is returned and 'ctx' is correctly initialized
+// On failure, 1 is returned
+// TODO: Free 'ctx' on error
+serial_context_t *serial_open(const char *dev) {
+  if (!dev || *dev == '\0') return NULL;
+  serial_context_t *ctx = malloc(sizeof(serial_context_t));
+  err_check(!ctx, NULL, "Unable to use the memory allocator");
 
   // Open the device file
-  dev_fd = open(dev, O_RDWR);
-  if (dev_fd < 0) return -1;
-  if (!isatty(dev_fd)) {
-    close(dev_fd);
-    return -1;
+  if ((ctx->dev_fd = open(dev, O_RDWR | O_NOCTTY)) < 0) {
+    perror(__func__);
+    free(ctx);
+    return NULL;
   }
+
+  if (!isatty(ctx->dev_fd)) {
+    err_log("Device is not a serial TTY");
+    close(ctx->dev_fd);
+    free(ctx);
+    return NULL;
+  }
+
+  // Setup serial device
+  struct termios dev_io;
+  tcgetattr(ctx->dev_fd, &dev_io);
+
+  // Non-canonical communication with no hardware flow control, embedded parity,
+  // double stop bit etc...
+  dev_io.c_cflag &= ~(CRTSCTS | PARENB | CSTOPB | CSIZE);
+  dev_io.c_iflag &= ~(IXON | IXOFF | IXANY);
+  dev_io.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+  dev_io.c_oflag = 0; // TODO: Make this portable
+
+  dev_io.c_cflag    |= CS8 | CREAD | CLOCAL; // Read-enabled 8N1
+  dev_io.c_cc[VMIN]  = 1;   // Never make read() calls indefinitely blocking
+  dev_io.c_cc[VTIME] = 30;  // Wait at most 3 seconds for a read()
+  //dev_io.c_lflag |= IGNBRK; // Ignore serial BREAK sequence
+
 
   // Set the serial baud rate
   cfsetospeed(&dev_io, BAUD_RATE);
   cfsetispeed(&dev_io, BAUD_RATE);
 
   // Apply changes made in 'dev_io' (immediately)
-  tcsetattr(dev_fd, TCSANOW, &dev_io);
-  return dev_fd;
+  tcsetattr(ctx->dev_fd, TCSANOW, &dev_io);
+
+  // Initialize serial context
+  ctx->rx.buffer = ringbuffer_new(RX_BUF_SIZE);   // TODO: Check errors and free 'ctx'
+  pthread_mutex_init(ctx->rx.ongoing_lock, NULL); // TODO: Check errors and free 'ctx'
+  ctx->rx.ongoing = 0;
+
+  // Flush the kernel internal buffer
+  // TODO: Only flush kernel internal buffer
+  serial_rx_flush(ctx);
+
+  _serial_rx_start(ctx); // Start receiving
+
+  return ctx;
 }
 
 
 // Close a serial device
-// Returns 0 on success, 1 if the descriptor given is not a tty device,
-// -1 if the 'close' function fails
-int serial_close(int dev_fd) {
-  if (dev_fd < 3 || !isatty(dev_fd))  // fd < 3 => Exclude stdin/stdout/stderr
-    return 1;
-  else return close(dev_fd);
+// Returns 0 on success, 1 if the serial context given is not valid
+int serial_close(serial_context_t *ctx) {
+  if (!context_isvalid(ctx)) return 1;
+
+  // Stop and destroy rx thread
+  if (ctx->rx.ongoing) {
+    _serial_rx_stop(ctx);
+    if (pthread_join(ctx->rx.thread, NULL) != 0)
+      err_log("Unable to join RX thread");
+  }
+
+  // Close the serial port file descriptor - Don't check errors
+  if (close(ctx->dev_fd) != 0)
+    err_log("Unable to close device descriptor");
+  ctx->dev_fd = -1; // This serial context is not valid anymore
+
+  if (pthread_mutex_destroy(ctx->rx.ongoing_lock) != 0) // Destroy RX mutexes
+    err_log("Unable to destroy RX ongoing mutex");
+
+  return 0;
 }
 
 
-// Craft on-the-fly and send a packet
-// Returns 0 on success, 1 otherwise
-int serial_craft_and_send(packet_type_t type, const void *data,
-    unsigned data_size, int dev_fd) {
-  if (type >= PACKET_TYPE_COUNT || (!data && data_size) ||
-      data_size > PACKET_DATA_MAX_SIZE || dev_fd < 0)
-    return 1;
+// Get at most 'n' bytes from the serial port
+// Return the number of bytes read
+size_t serial_rx(serial_context_t *ctx, void *dest, size_t size) {
+  if (!context_isvalid(ctx) || !dest || !serial_rx_ongoing(ctx))
+    return 0;
 
-  // Handle packet creation given its type
-  packet_t p;
-  switch (type) {
-    // ACK and ERR are not supported in this context
-    case PACKET_TYPE_ACK:
-    case PACKET_TYPE_ERR:
-      return 1;
-
-    // Generic packet (i.e. DAT, CMD or CTR)
-    default:
-      packet_craft(type, data, data_size, &p);
+  size_t n;
+  for (n=0; n < size; ++n)
+    if (ringbuffer_pop(ctx->rx.buffer, dest + n) != 0)
       break;
-  }
 
-  debug {
-    puts("Crafted a new packet to send");
-    packet_print(&p);
-  }
+  return n;
+}
 
-  // Continously send the packet until an ACK response is received
-  for (unsigned i=0; i <= CONSECUTIVE_ERRORS_THRESHOLD; ++i) {
-    packet_t res;  // Response packet
 
-    // Send the packet, exiting on error
-    if (_write(dev_fd, (void*) &p, p.size) != 0)
-      return 1;
-    debug puts("Packet was sent");
+// Race-protected getter for 'rx_ongoing' context variable
+// Returns 0 if not receiving, 1 otherwise
+unsigned char serial_rx_ongoing(serial_context_t *ctx) {
+  pthread_mutex_lock(ctx->rx.ongoing_lock);
+  int ongoing = ctx->rx.ongoing;
+  pthread_mutex_unlock(ctx->rx.ongoing_lock);
 
-    // Receive the response
-    serial_recv(dev_fd, &res);
-    debug {
-      printf("Response received\n");
-      packet_print(&res);
+  return ongoing;
+}
+
+
+// Get the number of available data to read
+size_t serial_rx_available(serial_context_t *ctx) {
+  if (context_isvalid(ctx) && ctx->rx.ongoing)
+    return ringbuffer_used(ctx->rx.buffer);
+  else return 0;
+}
+
+// Flush the RX buffers (RX thread ringbuffer and kernel internal buffer)
+void serial_rx_flush(serial_context_t *ctx) {
+  if (!ctx) return;
+  ringbuffer_flush(ctx->rx.buffer); // Flush the RX thread ringbuffer
+
+  // Flush the kernel internal buffer for the file descriptor
+  // The 'sleep' is for a bug in the linux kernel that probably won't be fixed
+  // https://bugzilla.kernel.org/show_bug.cgi?id=5730
+  static const struct timespec flush_sleep_val = { 0, ONE_MSEC };
+  nanosleep(&flush_sleep_val, NULL);
+  tcflush(ctx->dev_fd, TCIOFLUSH); // TODO: TCOFLUSH?
+}
+
+
+// Write data to the serial port with POSIX write
+// Return the number of bytes effectively written or -1 on failure
+ssize_t serial_tx(serial_context_t *ctx, const void *buf, size_t size) {
+  ssize_t written = write(ctx->dev_fd, buf, size);
+  err_check_perror(written < 0, -1);
+
+  // Wait for the data to be physically sent and give the AVR a while
+  static const struct timespec write_sleep_val = { 0, ONE_MSEC };
+  tcdrain(ctx->dev_fd);
+  nanosleep(&write_sleep_val, NULL);
+
+  return written;
+}
+
+
+// [AUX] Tell the RX thread to stop receiving data (but do not destroy it)
+static void _serial_rx_stop(serial_context_t *ctx) {
+  pthread_mutex_lock(ctx->rx.ongoing_lock);
+  ctx->rx.ongoing = 0;
+  pthread_mutex_unlock(ctx->rx.ongoing_lock);
+}
+
+
+// [AUX] RX thread task
+// Constantly read data and store it in the RX ringbuffer
+#define RX_INTER_BUF_SIZE 128
+static void *_serial_rx_task(void *arg) {
+  serial_context_t *ctx = arg;
+  unsigned char rx_inter_buf[RX_INTER_BUF_SIZE];
+
+  debug err_log("RX now ongoing");
+  while (serial_rx_ongoing(ctx)) {
+    //debug printf("[RX] New iteration\n");
+    ssize_t received = read(ctx->dev_fd, rx_inter_buf, RX_INTER_BUF_SIZE);
+    if (received < 0) perror(__func__);
+    else for (size_t i=0; i < received; ++i) {
+      unsigned char c = rx_inter_buf[i];
+      ringbuffer_push(ctx->rx.buffer, c);
+      //debug ringbuffer_print(ctx->rx.buffer);
+      debug err_log("Received byte: 0x%hhx", c);
     }
-    if (res.type == PACKET_TYPE_ACK) return 0;
-    else if (res.type != PACKET_TYPE_ERR) // Error: unexpected packet type
-      return 1;
   }
 
-  fputs("Error: Too many consecutive errors while receiving package\n", stderr);
+  pthread_exit(NULL);
+}
+
+
+// [AUX] Start receiving data in a separated (POSIX) thread
+// Returns 0 if the thread is started and running, 1 otherwise
+static int _serial_rx_start(serial_context_t *ctx) {
+  ctx->rx.ongoing = 1;
+  if (pthread_create(&ctx->rx.thread, NULL, _serial_rx_task, ctx) == 0)
+    return 0;
+
+  // Error on pthread creation
+  ctx->rx.ongoing = 0;
+  err_log("Unable to start new thread");
   return 1;
-}
-
-
-// Receive a packet from the tmon, storing it into dest
-// Returns 0 on success, 1 otherwise
-// TODO: Add error checking
-int serial_recv(int dev_fd, packet_t *dest) {
-  if (!dest || dev_fd < 0) return 1;
-
-  // Get first byte of the header
-  _read(dev_fd, (void*) dest, PACKET_HEADER_SIZE);
-
-  // If the packet brings data, get it
-  uint8_t dest_data_size = dest->size - PACKET_HEADER_SIZE;
-  if (packet_brings_data(dest) && dest_data_size)
-    _read(dev_fd, dest->data, dest_data_size);
-
-  debug {
-    printf("\nReceived packet\n");
-    packet_print(dest);
-  }
-
-  return 0;
-}
-
-// Craft on-the-fly and send a command packet (handier)
-// Returns 0 on success, 1 otherwise
-int serial_cmd(command_id_t id, const void *arg, unsigned arg_size, int dev_fd) {
-  if (id >= COMMAND_COUNT || dev_fd < 0 || arg_size > PACKET_DATA_MAX_SIZE -
-      sizeof(command_id_t) || (!arg && arg_size))
-    return 1;
-
-  char _payload[PACKET_DATA_MAX_SIZE];
-  command_payload_t *payload = (command_payload_t*) _payload;
-
-  payload->id = id;
-  if (arg) memcpy(payload->arg, arg, arg_size);
-
-  return serial_craft_and_send(PACKET_TYPE_CMD, payload,
-      sizeof(command_id_t) + arg_size, dev_fd);
-}
-
-
-
-// [AUX] Write a buffer to the serial port, one byte at a time (blocking)
-int _write(int fd, unsigned char *buf, size_t nbytes) {
-  for (size_t i=0; i < nbytes; ++i) {
-    ssize_t ret;
-    while ((ret = write(fd, buf + i, 1)) <= 0)
-      if (ret < 0 && errno != EINTR) {
-        perror(__func__);
-        return 1;
-      }
-  }
-  return 0;
-}
-
-// [AUX] Read from the serial port, one byte at a time (blocking)
-int _read(int fd, unsigned char *buf, size_t nbytes) {
-  for (ssize_t bytes_read = 0; bytes_read < nbytes; ++bytes_read) {
-    ssize_t ret = read(fd, buf, nbytes) == nbytes ? 0 : 1;
-    if (ret < 0)
-      switch (errno) {
-        case EINTR: continue;
-        case EAGAIN:
-          fputs("Error: timeout was reached for reading data", stderr);
-          return 1;
-        default:
-          perror(__func__);
-          return 1;
-      }
-    else bytes_read += ret;
-  }
-  return 0;
 }

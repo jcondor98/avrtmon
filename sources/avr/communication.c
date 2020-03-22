@@ -1,161 +1,245 @@
 // avrtmon
-// Communication handler - Source file
-// Paolo Lucchesi - Fri 27 Sep 2019 07:28:26 PM CEST
-#include <string.h>  // memcpy
+// Communication handler - Source File
+// Paolo Lucchesi - Mon 17 Feb 2020 03:23:45 PM CET
+// TODO: Find a way to correctly discard packets (e.g. flush the serial buffer
+// and wait a while)
+#include <avr/io.h>
+#include <avr/interrupt.h>
+
 #include "communication.h"
 #include "command.h"
 #include "packet.h"
 #include "serial.h"
+#include "led.h"
 
+// LED signals for errors or notices
+#define led_error() led_blink(100, 5)
+#define led_notice() led_blink(60, 3)
 
-// Buffers for serial RX and TX
-// Raw buffers are treated as packets, pointers to them are generic
-static volatile packet_t rx_pack;
-static packet_t tx_pack;
-static volatile void *rx_buf = &rx_pack;
-static void *tx_buf = &tx_pack;
+// Handle packet ids -- Represents the next id expected or to be used
+// The variable name is long on purpose (global variable)
+static uint8_t packet_global_id;
 
-// Default opmode
+// Scaled timer variables for RTO
+static volatile uint16_t rto_counter;
+static volatile uint8_t  rto_elapsed; // 1 if it is elapsed, 0 if not
+static volatile uint16_t rto_ongoing;
+
+//static const uint16_t rto = 2 * RTO_DELIVERY_TIME + 4 * RTO_PROCESS_TIME;
+static const uint16_t rto = 500; // Half second
+
+// Communication Opmode variables
 static com_operation_f opmode_default[];
-
-// Opmode currently in use
 static com_opmode_t opmode = opmode_default;
 
+// Start the RTO timer, resetting it if it is ongoing
+static void rto_timer_start(void);
 
-// Start receiving a packet, storing it in 'rx_pack'
-#define com_recv() serial_rx(rx_buf, sizeof(packet_t))
+// Stop the RTO timer
+static void rto_timer_stop(void);
 
 
-// Busy wait for each byte of a packet
-// It is assumed that at least a byte of the packet is already available
-// Returns 0 if the packet is sane, 1 if it is corrupted
-uint8_t _rx_pack_busy_wait(void) {
-  uint8_t available = serial_rx_available();
+// Initialize communication module - Use Timer 3 for packet exchange timing
+void communication_init(void) {
+  serial_init(); // Initialize serial port
 
-  // Wait for the entire header to arrive
-  while (available < 2)
-    available = serial_rx_available();
+  // Initialize the RTO Timer
+  // Set the prescaler to 1024
+  TCCR3A = 0;
+  TCCR3B = (1 << WGM52) | (1 << CS50) | (1 << CS52);
 
-  uint8_t type = rx_pack.type;
-  if (type > PACKET_TYPE_COUNT)  // Early check against bad packet types
-    return 1;
+  // Set the OCR value
+  OCR3A = (uint16_t)(15.625 * RTO_RESOLUTION);
 
-  // Check the packet header integrity
-  if (packet_check_header((void*) rx_buf) != 0) {
-   com_err((const packet_t*) rx_buf);
-   return 1;
-  }
-
-  if (packet_brings_data((const packet_t*) rx_buf)) {
-    // Wait for all the bytes to be received
-    uint8_t size = rx_pack.size;
-    while (available < size)
-      available = serial_rx_available();
-
-    // Check the packet against its CRC
-    if (packet_check_crc((void*) rx_buf) != 0)
-      return 1;
-  }
-
-  return 0; // Success
+  // Initialize variables
+  packet_global_id = 0;
+  rto_counter = 0;
+  rto_elapsed = 0;
+  rto_ongoing = 0;
 }
 
 
-// Communication handler
-void com_handler(void) {
-  const uint8_t available = serial_rx_available();
+// Single attempt to receive a packet
+// Return 0 on a successful attempt, 1 otherwise
+// TODO: Optimize to get all the available characters in a stroke
+static uint8_t _recv_attempt(packet_t *p) {
+  uint8_t *p_raw = (uint8_t*) p;
 
-  // If no data is available, return immediately
-  if (!available) return;
+  // Start Round-Trip Time timeout
+  if (!rto_ongoing) return 1;
+  uint8_t type, id, size=0, received=0;
 
-  // If the packet is corrupted, send an error
-  if (_rx_pack_busy_wait() != 0)
-    com_err((const packet_t*) rx_buf);
+  while (1) {
+    if (rto_elapsed) return E_TIMEOUT_ELAPSED;
 
-  // If the packet is sane, process it
-  else {
-    // Execute the operation for the packet to process -- If the packet type is
-    // not supported by the opmode in use, fallback to the default one
-    packet_type_t type = rx_pack.type;
-    if (type != PACKET_TYPE_ACK && type != PACKET_TYPE_ERR)
-      com_ack((const packet_t*) rx_buf);
-    if (opmode[type])
-      opmode[type]((const packet_t*) rx_buf);
-    else
-      opmode_default[type]((const packet_t*) rx_buf);
+    if (serial_rx_getchar(p_raw + received)) { // New data to process
+      switch (++received) { // Received i-th byte
+
+        case 1:
+          // Early fail on mismatching ID
+          type = packet_get_type(p);
+          id = packet_get_id(p);
+          if ((type == PACKET_TYPE_HND && id != 0) || id != packet_global_id)
+            return E_ID_MISMATCH;
+          break;
+
+        case 2:
+          // Check packet header integrity
+          if (packet_check_header(p) != 0) return E_CORRUPTED_HEADER;
+          size = packet_get_size(p);
+          break;
+
+        default:
+          if (received >= size) // Last byte
+            return (packet_check_crc(p) != 0) ? E_CORRUPTED_CHECKSUM : E_SUCCESS;
+          break;
+      }
+    }
+  }
+}
+
+
+// Get an incoming packet if data is available on the serial port (blocking)
+// Returns 0 on success, 1 on failure
+// TODO: Handle lost ACK (i.e. host retransmits packet)
+uint8_t communication_recv(packet_t *p) {
+  static packet_t response[1];
+
+  for (uint8_t attempt=0; attempt < MAXIMUM_RECV_ATTEMPTS; ++attempt) {
+    rto_timer_start();
+    uint8_t ret = _recv_attempt(p);
+
+    switch (ret) {
+
+      case E_SUCCESS:
+        packet_ack(p, response);
+        serial_tx(response, PACKET_MIN_SIZE);
+        rto_timer_stop();
+        if (packet_get_type(p) == PACKET_TYPE_HND)
+          packet_global_id = 1;
+        else packet_global_id = packet_next_id(packet_global_id);
+        //debug led_notice();
+        return 0;
+
+      case E_CORRUPTED_HEADER:
+      case E_CORRUPTED_CHECKSUM:
+        packet_err(p, response);
+        serial_tx(response, PACKET_MIN_SIZE);
+        //serial_rx_reset(); // Discard remaining data to process
+        rto_timer_stop();
+        break;
+
+      default:
+        //debug led_error();
+        break; // Discard on RTO timeout or mismatching ID
+    }
   }
 
-  // Before returning, start waiting for another packet
-  com_recv();
+  return 1; // Too many consecutive failures
+}
+
+
+// Send a packet (blocking)
+// Returns 0 if the packet is sent correctly, 1 otherwise
+uint8_t communication_send(const packet_t *p) {
+  const uint8_t size = packet_get_size(p);
+  if (!p || !size || size > sizeof(packet_t))
+    return 1;
+
+  for (uint8_t attempt=0; attempt < MAXIMUM_SEND_ATTEMPTS; ++attempt) {
+    rto_timer_start(); // Restart RTO timer for each attempt
+
+    // Blocking send
+    serial_tx(p, size);
+    while (serial_tx_ongoing()) ;
+
+    // Attempt to receive ACK/ERR
+    // Assertion on ACK/ERR id is made inside the receive attempt function
+    // If any packet different from an ACK one is received, take it as a failure
+    // TODO: Assert correct ID
+    static packet_t response[1];
+    uint8_t ret = _recv_attempt(response);
+    if (rto_ongoing) rto_timer_stop();
+    if (ret == E_SUCCESS && packet_get_type(response) == PACKET_TYPE_ACK) {
+      packet_global_id = packet_next_id(packet_global_id);
+      return 0;
+    }
+  }
+
+  return 1; // Too many consecutive failures
+}
+
+
+// Send an in-place crafted packet
+// Returns 0 if the packet is sent correctly, 1 otherwise
+uint8_t communication_craft_and_send(packet_type_t type, const uint8_t *data,
+    uint8_t data_size) {
+  static packet_t p[1];
+  if (packet_craft(packet_global_id, type, data, data_size, p) != 0)
+    return 1;
+  return communication_send(p);
+}
+
+// Transfer control flow to the communication layer
+void communication_handler(void) {
+  if (!serial_rx_available()) return;
+
+  // If data is available, attempt to receive a new packet
+  static packet_t p[1];
+  if (communication_recv(p) != 0) return;
+
+  // The incoming packet have been received correctly
+  const uint8_t type = packet_get_type(p);
+  if (opmode[type]) opmode[type](p);
+  else opmode_default[type](p);
 }
 
 
 // Switch communication opmode
-void com_opmode_switch(const com_opmode_t opmode_new) {
+void communication_opmode_switch(const com_opmode_t opmode_new) {
   if (opmode_new) opmode = opmode_new;
 }
 
 // Restore the communication opmode to the default one
-void com_opmode_restore(void) {
+void communication_opmode_restore(void) {
   opmode = opmode_default;
 }
 
-// Send the packet that is currently loaded in 'tx_pack'
-static inline uint8_t _com_send(void) {
-  return serial_tx(tx_buf, tx_pack.size);
+
+
+// RTO Timer ISR -- Timer 3 is used
+ISR(TIMER3_COMPA_vect) {
+  if (++rto_counter >= rto) {
+    TIMSK3 &= ~(1 << OCIE3A);
+    rto_elapsed = 1;
+    rto_ongoing = 0;
+  }
 }
 
-// Send a packet
-void com_send(const packet_t *pack) {
-  if (!pack) return;
-  while (serial_tx_ongoing()) ;
-  memcpy(tx_buf, pack, pack->size);
-  _com_send();
+// Start the timer, resetting it if it is ongoing
+static void rto_timer_start(void) {
+  if (rto_ongoing) rto_timer_stop();
+  rto_counter = 0;
+  rto_ongoing = 1;
+  rto_elapsed = 0;
+  TIMSK3 |= (1 << OCIE3A);
 }
 
-// Resend the last TX packet
-void com_resend(void) {
-  while (serial_tx_ongoing()) ;
-  _com_send();
-}
-
-// Send an in-place crafted packet
-void com_craft_and_send(packet_type_t type, const uint8_t *data,
-    uint8_t data_size) {
-  if (packet_craft(type, data, data_size, &tx_pack) == 0)
-    _com_send();
-}
-
-// Acknowledge a received packet
-void com_ack(const packet_t *pack) {
-  packet_ack(pack, &tx_pack);
-  _com_send();
-}
-
-// Raise an error for a received packet
-void com_err(const packet_t *pack) {
-  packet_err(pack, &tx_pack);
-  _com_send();  // Just resend the just sent packet
-}
-
-// Initialize the communication module
-void com_init(void) {
-  serial_init();
-  com_recv();
+// Stop the timer
+static void rto_timer_stop(void) {
+  TIMSK3 &= ~(1 << OCIE3A);
+  rto_ongoing = 0;
 }
 
 
 
+// Default, built-in communication opmode
 // Operation for PACKET_TYPE_HND -- Reset the communication environment
+// TODO: Restore what is necessary
 static void _op_hnd(const packet_t *rx_pack) {
-  com_opmode_restore();
-  serial_rx_reset();
-  serial_tx_reset();
-}
-
-// Operation for PACKET_TYPE_ERR -- Resend the packet
-static void _op_err(const packet_t *rx_pack) {
-  com_resend();
+  communication_opmode_restore();
+  //serial_rx_reset();
+  //serial_tx_reset();
 }
 
 // Operation for PACKET_TYPE_CMD -- Change operation table and execute command
@@ -164,8 +248,9 @@ static void _op_cmd(const packet_t *rx_pack) {
   command_exec(payload->id, (const void*) payload->arg);
 }
 
-// For ACK, CTR and DAT do nothing
+// For ACK, ERR, CTR and DAT do nothing
 static void _op_ack(const packet_t *rx_pack) {}
+static void _op_err(const packet_t *rx_pack) {}
 static void _op_ctr(const packet_t *rx_pack) {}
 static void _op_dat(const packet_t *rx_pack) {}
 

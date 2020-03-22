@@ -9,6 +9,13 @@
 
 #include "packet.h"
 
+#define PACKET_ID 0
+
+// Extern setters for packet header fields
+extern void packet_set_type(packet_t *p, uint8_t type);
+extern void packet_set_size(packet_t *p, uint8_t size);
+extern void packet_set_id(packet_t *p, uint8_t id);
+
 // Expected validity of a packet in a test
 typedef enum PACKET_VALIDITY_E {
   PACKET_INVALID = 0, PACKET_VALID = 1
@@ -68,17 +75,17 @@ int main(int argc, const char *argv[]) {
   memset(p, 0x00, PACKET_HEADER_SIZE);
   test_expr(packet_header_parity(p) == 0,
       "Packet header computing algorithm should work when bits are even");
-  p->header_par = 1;
+  p->header[1] |= 0x01;
   test_expr(packet_header_parity(p) != 0,
       "Packet header computing algorithm should work when bits are odd");
 
   // Test packet integrity checking
-  packet_craft(PACKET_TYPE_DAT, (void*) data, data_size, p);
+  packet_craft(PACKET_ID, PACKET_TYPE_DAT, (void*) data, data_size, p);
 
   printf("\nTesting packet_check() with corrupted header parity bit\n");
-  p->header_par ^= 1;
+  p->header[1] ^= 0x01;
   test_packet_integrity(PACKET_INVALID, p);
-  p->header_par ^= 1;  // Revert previous change - 'p' is now valid again
+  p->header[1] ^= 0x01;  // Revert previous change - 'p' is now valid again
 
   printf("\nTesting packet_check() with corrupted CRC\n");
   p->data[data_size] += 1;
@@ -86,9 +93,9 @@ int main(int argc, const char *argv[]) {
   p->data[data_size] -= 1;  // Revert previous change
 
   printf("\nTesting packet_check() with corrupted header\n");
-  p->type = PACKET_TYPE_CMD;
+  packet_set_type(p, PACKET_TYPE_CMD);
   test_packet_integrity(PACKET_INVALID, p);
-  p->type = PACKET_TYPE_DAT;  // Revert previous change
+  packet_set_type(p, PACKET_TYPE_DAT);  // Revert previous change
 
   printf("\nTesting packet_check() with corrupted data\n");
   p->data[0] += 1;
@@ -111,10 +118,10 @@ int main(int argc, const char *argv[]) {
 static void test_params(packet_validity_t params_are_valid, packet_type_t type,
     const void *data, uint8_t data_size, packet_t *dest) {
 
-  uint8_t ret = packet_craft(type, data, data_size, dest);
+  uint8_t ret = packet_craft(PACKET_ID, type, data, data_size, dest);
   int expr = params_are_valid ^ ret;
   test_expr(expr,
-      "packet_craft(%x, %p, %d, %p) should %screate a packet",
+      "packet_craft(%d, %x, %p, %d, %p) should %screate a packet", PACKET_ID,
       type, data, data_size, dest, params_are_valid ? "" : "not ");
 
   if (!expr) // Dump packet info if the test fails

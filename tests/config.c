@@ -18,10 +18,9 @@ typedef struct _config_field_accessor_s {
 
 // Store metadata to dynamically access configuration fields
 static const config_field_accessor_t cfg_accessors[CONFIG_FIELD_COUNT] = {
-  { .size = sizeof(uint8_t), .offset = offsetof(config_t, lm_channel) },
-  { .size = sizeof(uint16_t), .offset = offsetof(config_t, lm_interval) },
-  { .size = sizeof(uint8_t), .offset = offsetof(config_t, start_pin) },
-  { .size = sizeof(uint8_t), .offset = offsetof(config_t, stop_pin) }
+  { .size = sizeof(uint8_t), .offset = offsetof(config_t, field1) },
+  { .size = sizeof(uint16_t), .offset = offsetof(config_t, field2) },
+  { .size = sizeof(uint32_t), .offset = offsetof(config_t, field3) }
 };
 
 // Get the size of a single field
@@ -95,10 +94,9 @@ uint8_t config_save_field(config_field_t field) {
 
 // TODO: (maybe) Optimize making this a hash table
 static const char *_config_field_str[] = {
-  "lm_channel",
-  "lm_interval",
-  "start_pin",
-  "stop_pin"
+  "field1",
+  "field2",
+  "field3"
 };
 
 // Get a string representing a config field (by config field id)

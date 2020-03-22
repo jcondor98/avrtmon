@@ -49,6 +49,9 @@ $(OBJDIR)/%.o:	%.s
 
 all: $(TARGET) ;
 
+host:
+	@ARCH=host make
+
 
 # Generate the configuration sources
 config_gen:
@@ -62,6 +65,8 @@ config_gen:
 # You can also choose a test method defining the variable 'TEST_WITH' in your
 # shell. Supported option are none (i.e. execute as-is), 'gdb' and 'less'
 test_%: CFLAGS := $(TESTFLAGS) $(CFLAGS)
+
+NVM_TEST_SOURCES := tests/mock_nvm.c tests/nvm.c
 
 # Generate a mock configuration for testing
 define test_config_gen =
@@ -82,12 +87,12 @@ test_packet: $(addprefix $(OBJDIR)/, crc.o packet.o)
 
 test_temperature:
 	$(call test_config_gen)
-	$(call host_test, $(SRCDIR)/avr/temperature.c tests/mock_nvm.c tests/nvm.c)
+	$(call host_test, $(SRCDIR)/avr/temperature.c $(NVM_TEST_SOURCES))
 	$(call test_config_clean)
 
 test_config:
 	$(call test_config_gen)
-	$(call host_test, tests/config.c tests/mock_nvm.c)
+	$(call host_test, tests/config.c $(NVM_TEST_SOURCES))
 	$(call test_config_clean)
 
 test_shell:
@@ -96,9 +101,11 @@ test_shell:
 test_list:
 	$(call host_test, $(SRCDIR)/host/list.c)
 
-test_serial: tests/serial_test.hex
-	# TODO: Write an automated test for host-side
-	# TODO: Provide also 'serial.o' object file
+test_ringbuffer:
+	$(call host_test, $(SRCDIR)/ringbuffer.c)
+
+test_meta:
+	$(call host_test)
 
 # Perform all tests in a stroke
 test:

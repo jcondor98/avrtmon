@@ -3,7 +3,7 @@
 // Paolo Lucchesi - Test Unit
 #include <stdio.h>
 #include "test_framework.h"
-#include "nvm_mock.h"
+#include "nvm.h"
 
 #include "temperature.h"
 
@@ -21,7 +21,6 @@ int main(int argc, const char *argv[]) {
   printf("DB capacity          -> %d\n", nvm_image->db.capacity);
   printf("TEMP_DB_CAPACITY     -> %d\n", TEMP_DB_CAPACITY);
   printf("NVM base address     -> %p\n", nvm);
-  printf("NVM limit address    -> %p\n", NVM_LIMIT);
   printf("sizeof(temperature_db_t) -> %d\n", sizeof(temperature_db_t));
   */
 

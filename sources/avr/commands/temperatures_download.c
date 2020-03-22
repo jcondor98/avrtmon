@@ -4,11 +4,13 @@
 #include "command.h"
 #include "temperature.h"
 #include "communication.h"
+#include "packet.h" // Just packet types
 
 #define COMMAND_NAME cmd_temperatures_download
 #define TEMP_BURST (PACKET_DATA_MAX_SIZE / sizeof(temperature_t))
 
 // Keep track of the download state across different received packets
+// TODO: Move inside the function
 static id_t temp_idx = 0, temp_total;
 static temperature_t temp_buf[TEMP_BURST];
 
@@ -21,7 +23,7 @@ static void _start(const void *arg) {
 
   // Send the number of temperatures present in the DB
   id_t temp_count = temperature_count();
-  com_craft_and_send(PACKET_TYPE_CTR, (void*)(&temp_count), sizeof(id_t));
+  communication_craft_and_send(PACKET_TYPE_CTR, (void*)(&temp_count), sizeof(id_t));
 }
 
 
@@ -31,7 +33,7 @@ static void _start(const void *arg) {
 static void _op_ack(const packet_t *rx_pack) {
   if (temp_idx >= temp_total) {
     // Communicate end of transmission with an empty CTR packet
-    com_craft_and_send(PACKET_TYPE_CTR, NULL, 0);
+    communication_craft_and_send(PACKET_TYPE_CTR, NULL, 0);
     temperature_db_reset();
     return;
   }

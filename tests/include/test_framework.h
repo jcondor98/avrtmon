@@ -38,21 +38,21 @@ void test_summary(void);
 // Colors for colored output (e.g. when using fprintf_colored
 #define N_COLOR_VALUES 15
 typedef enum ANSI_COLOR_E {
-	C_NONE				=	 0,
-	C_RED				=	 31,
-	C_GREEN				=	 32,
-	C_YELLOW			=	 33,
-	C_BLUE				=	 34,
-	C_MAGENTA			=	 35,
-	C_CYAN				=	 36,
-	C_WHITE				=	 37,
-	C_BRIGHT_RED		=	 91,
-	C_BRIGHT_GREEN		=	 92,
-	C_BRIGHT_YELLOW		=	 93,
-	C_BRIGHT_BLUE		=	 94,
-	C_BRIGHT_MAGENTA	=	 95,
-	C_BRIGHT_CYAN		=	 96,
-	C_BRIGHT_WHITE		=	 97
+  C_NONE            =   0,
+  C_RED             =   31,
+  C_GREEN           =   32,
+  C_YELLOW          =   33,
+  C_BLUE            =   34,
+  C_MAGENTA         =   35,
+  C_CYAN            =   36,
+  C_WHITE           =   37,
+  C_BRIGHT_RED      =   91,
+  C_BRIGHT_GREEN    =   92,
+  C_BRIGHT_YELLOW   =   93,
+  C_BRIGHT_BLUE     =   94,
+  C_BRIGHT_MAGENTA  =   95,
+  C_BRIGHT_CYAN     =   96,
+  C_BRIGHT_WHITE    =   97
 } ansi_color_t;
 
 // Color escape sequence (to start printing colored stuff)

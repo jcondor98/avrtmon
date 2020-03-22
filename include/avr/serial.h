@@ -6,7 +6,8 @@
 // want to send a lot of data in one stroke, you have to wait between each byte.
 // This is because most (or every, dunno) AVR boards do not have a real,
 // reasonably large buffer for the usart communication, in fact, they have a
-// duplex single byte register (i.e. UDR0[RX] and UDR0[TX])
+// duplex single byte register (i.e. UDR0[RX] and UDR0[TX]), and this specific
+// implementation does not protect (for now) from data overrun errors
 #ifndef __SERIAL_LAYER_H
 #define __SERIAL_LAYER_H
 #include <stdint.h>
@@ -15,38 +16,49 @@
 #define BAUD_RATE 57600
 #define UBRR_VALUE (F_CPU / 16 / BAUD_RATE - 1)
 
-// Transmission buffer size - Default is 128
+// Transmission buffer size - Default is 64
 #ifndef TX_BUFFER_SIZE
-#define TX_BUFFER_SIZE 128
+#define TX_BUFFER_SIZE 64
+#endif
+
+// Reception buffer size - Default is 64
+#ifndef RX_BUFFER_SIZE
+#define RX_BUFFER_SIZE 64
 #endif
 
 
-// Initialize the USART
+// Initialize the UART
 void serial_init(void);
 
-// Receive at most 'size' bytes of data, storing them into an external buffer
-void serial_rx(volatile void *buf, uint8_t size);
+// Read 'size' bytes, storing them into 'buf' - Non-blocking
+// Returns the number of bytes read
+uint8_t serial_rx(void *buf, uint8_t size);
+
+// Same as 'serial_rx', blocking
+// Return the number of bytes read
+uint8_t serial_rx_blocking(void *buf, uint8_t size);
+
+// Return a single received character
+#define serial_rx_getchar(c) serial_rx(c,1)
 
 // Send data stored in a buffer
 // The data will be copied into another buffer, so it can be reused immediately
-// Returns:
-//   0 -> Success, data has been loaded and the first byte was already sent
-//   1 -> Inconsistent arguments were passed
-//   2 -> The data of the previous call has not been sent entirely yet (no
-//        action done in that case, try later)
+// Returns 0 on success, 1 on failure
+// The function blocks until the previous transmission, if any, is completed,
+// and returns immediately, not waiting for all the data to be already sent
 uint8_t serial_tx(const void *buf, uint8_t size);
 
-// Return the number of bytes received after the last call to 'serial_rx_reset'
+// Return the number of bytes received
 uint8_t serial_rx_available(void);
 
-// Return the number of bytes received after the last call to 'serial_tx_reset'
+// Return the number of bytes sent
 uint8_t serial_tx_sent(void);
 
-// Return 1 if *x is ongoing, 0 otherwise
+// Return 1 if *X is ongoing, 0 otherwise
 uint8_t serial_rx_ongoing(void);
 uint8_t serial_tx_ongoing(void);
 
-// Reset the RX and TX state of the serial interface
+// Reset the *X state of the serial interface
 void serial_rx_reset(void);
 void serial_tx_reset(void);
 

@@ -39,7 +39,7 @@ crc_t crc(const void *data, uint8_t size) {
 // Returns the remainder of the division, but it can be safely converted to a
 // smaller data type if only knowing if the message is corrupted is relevant
 crc_t crc_check(const void *data, uint8_t size) {
-  if (!data) return (crc_t) ~0;
+  if (!data) return ~((crc_t) 0);
 
   const uint8_t *_data = (const uint8_t*) data;
   crc_t div_result = 0x00;

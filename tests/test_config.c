@@ -8,16 +8,25 @@
 
 #include "test_framework.h"
 #include "config.h"
-#include "nvm_mock.h"
+#include "nvm.h"
+
+
+// Inspect a chunk of memory
+static void inspect(const void *src, size_t size) {
+  printf("0x");
+  for (size_t i=0; i < size; ++i) {
+    unsigned char byte = *(((unsigned char*) src) + i);
+    printf(byte & 0xF0 ? " %2hhx" : " 0%1hhx", byte);
+  }
+}
 
 
 int main(int argc, const char *argv[]) {
-  printf("avrtmon - AVR Configuration Unit Test\n\n");
-  int ret;
+  printf("avrtmon - AVR Configuration Unit Test\n");
+  int ret, expr;
 
   // Data structure to store config fields
-  config_t _cfg_local;  // Do not use this directly...
-  config_t *cfg_local = &_cfg_local;  // ... Use these intstead
+  config_t cfg_local[1] = { { 0 } };
   void *cfg_local_raw = (void*) cfg_local;
 
   // Use a buffer as a temporary storage for a configuration field value
@@ -32,10 +41,9 @@ int main(int argc, const char *argv[]) {
     cfg_field_offsets[field] = config_get_offset(field);
 
 
-  // Finally, initialize the configuration module (which lives in memory)
+  printf("\nTesting 'config_fetch'\n");
   ret = config_fetch();
   test_expr(ret == 0, "Configuration data should be fetched successfully");
-
 
   printf("\nTesting 'config_get'\n");
   for (unsigned field=0; field < CONFIG_FIELD_COUNT; ++field) {
@@ -51,9 +59,16 @@ int main(int argc, const char *argv[]) {
       "destination pointer");
 
   printf("\nTesting obtained (default) values\n");
-  ret = test_expr(memcmp(cfg_local, &nvm->config, sizeof(config_t)) == 0,
-      "The obtained configuration data structure should be identical to the "
-      "default one");
+  expr = memcmp(cfg_local, &nvm_image->config, sizeof(config_t)) == 0;
+  ret = test_expr(expr, "The obtained configuration data structure should be "
+      "identical to the default one");
+  if (!expr) {
+    printf("Local config data: ");
+    inspect(cfg_local, sizeof(config_t));
+    printf("\nNVM config data:   ");
+    inspect(&nvm_image->config, sizeof(config_t));
+    putchar('\n');
+  }
 
   printf("\nTesting 'config_set'\n");
   // We flip all bits to 1 for every configuration field

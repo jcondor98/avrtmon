@@ -1,17 +1,11 @@
 // avrtmon
 // AVR-side Configuration - Source file
 // Paolo Lucchesi - Tue 27 Aug 2019 06:58:59 PM CEST
-#define _POSIX_C_SOURCE 200809L  // So we can use strdup() with ANSI C
 #include <string.h> // memcpy
 #include <stddef.h> // offsetof
 
 #include "config.h"
-
-#ifdef TEST
-#include "nvm_mock.h"
-#else
 #include "nvm.h"
-#endif
 
 
 // Stuff common to host and AVR

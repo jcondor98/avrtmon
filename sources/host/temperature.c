@@ -1,7 +1,6 @@
 // avrtmon
 // Temperature database - Source file
 // Paolo Lucchesi - Wed 30 Oct 2019 12:24:53 AM CET
-#define _POSIX_C_SOURCE 200809L  // So we can use strdup() with ANSI C
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

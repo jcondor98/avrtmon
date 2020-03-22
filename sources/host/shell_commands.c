@@ -10,59 +10,52 @@
 #include "host/list.h"
 #include "host/serial.h"
 #include "host/temperature.h"
+#include "host/communication.h"
 
-
-// Handle serial errors (specifically a shell command)
-// If an error occurs, exit from the shell command, returning 2 and printing
-// the error message, if any, to stderr
-#define serial_handle(action, err_msg) do {\
-  if ((action) != 0) {\
-    if (err_msg) fprintf(stderr, "Error: %s\n", err_msg);\
-    return 2;\
-  }\
-} while (0)
-
-
-// Type definition for the internal shell storage
-typedef struct _shell_storage_s {
-  int tmon_fd;
-  list_t *dbs;
-} shell_storage_t;
 
 // Declare a shell_storage_t variable casted from an opaque pointer
 #define _storage_cast(st,opaque) shell_storage_t *st=(shell_storage_t*)(opaque)
 
+#define DEBUG_RECV_MSG_SIZE 2048
+
+// Type definition for the internal shell storage
+typedef struct _shell_storage_s {
+  serial_context_t *serial_ctx;
+  list_t *dbs;
+} shell_storage_t;
+
+
 // Allocate and initialize a shell storage
 // Returns an opaque pointer to the allocated storage, or NULL on failure
 void *shell_storage_new(void) {
-  shell_storage_t *s = malloc(sizeof(shell_storage_t));
-  if (!s) return NULL;
+  shell_storage_t *st = malloc(sizeof(shell_storage_t));
+  if (!st) return NULL;
 
-  s->dbs = list_new();
-  if (!s->dbs) {
-    free(s);
+  st->dbs = list_new();
+  if (!st->dbs) {
+    free(st);
     return NULL;
   }
 
-  s->tmon_fd = -1;  // i.e. not connected
-  return (void*) s;
+  st->serial_ctx = NULL;  // i.e. not connected
+  return (void*) st;
 }
 
 // Cleanup this shell environment (i.e. free memory, close descriptors...)
 // Also frees the shell storage data structure itself
 void shell_cleanup(shell_t *s) {
+  if (!s) return;
   _storage_cast(st, s->storage);
 
   // Close the connection with the tmon, if any
-  if (st->tmon_fd >= 0 && serial_close(st->tmon_fd) != 0) {
+  if (st->serial_ctx && serial_close(st->serial_ctx) != 0)
     fputs("Error: Could not close the tmon file descriptor\n", stderr);
-    return;
-  }
 
   // Free the storage
   list_delete(st->dbs);
   free(st);
 }
+
 
 
 // CMD: echo
@@ -76,46 +69,26 @@ int echo(int argc, char *argv[], void *storage) {
   return 0;
 }
 
+
 // CMD: connect
 // Usage: connect <device_path>
 // Connect to an avrtmon, given its device file (usually under /dev)
+// If it is already connected, reconnect
 int connect(int argc, char *argv[], void *storage) {
   _storage_cast(st, storage);
   if (argc < 2) return 1;
 
-  if (st->tmon_fd >= 0) { // i.e. already connected
-    fputs("Error: already connected\n", stderr);
-    return 2;
+  if (st->serial_ctx)
+    fputs("Open serial context found; reconnecting\n", stderr);
+  else { // Open a descriptor for the tmon
+    st->serial_ctx = serial_open(argv[1]);
+    sh_error_on(!st->serial_ctx, "Unable to connect to the tmon", 2);
   }
 
-  // TODO: Use fprintf instead of perror
-  int tmon_fd = serial_open(argv[1]);
-  if (tmon_fd < 0) {
-    perror("Unable to connect to the tmon");
-    return 2;
-  }
+  // Estabilish the connection
+  sh_error_on(communication_connect(st->serial_ctx) != 0,
+      "Could not send a handshake packet", 3);
 
-  st->tmon_fd = tmon_fd;
-  serial_handle(serial_craft_and_send(PACKET_TYPE_HND, NULL, 0, st->tmon_fd),
-      "Could not send a handshake packet");
-  return 0;
-}
-
-
-// CMD: reconnect
-// Usage: reconnect
-// Reset existing communication session between host and tmon
-int reconnect(int argc, char *argv[], void *storage) {
-  _storage_cast(st, storage);
-  if (argc != 1) return 1;
-
-  if (st->tmon_fd < 0) {  // i.e. not connected
-    fputs("Error: tmon is not connected\n", stderr);
-    return 2;
-  }
-
-  serial_handle(serial_craft_and_send(PACKET_TYPE_HND, NULL, 0, st->tmon_fd),
-      "Could not send a handshake packet");
   return 0;
 }
 
@@ -127,20 +100,16 @@ int disconnect(int argc, char *argv[], void *storage) {
   _storage_cast(st, storage);
   if (argc != 1) return 1;
 
-  if (st->tmon_fd < 0) {  // i.e. not connected
-    fputs("Error: tmon is not connected\n", stderr);
-    return 2;
-  }
+  sh_error_on(!st->serial_ctx, "tmon is not connected", 2);
 
-  if (serial_close(st->tmon_fd) != 0) {
-    fputs("Error: Could not close the tmon file descriptor\n", stderr);
-    return 2;
-  }
+  int ret = serial_close(st->serial_ctx);
+  st->serial_ctx = NULL; // i.e. set to disconnected
+  sh_error_on(ret != 0, "Could not close the tmon file descriptor", 3);
 
-  st->tmon_fd = -1; // i.e. set to disconnected
   return 0;
 }
 
+/* TODO: Correct
 // CMD: download
 // Usage: download
 // Download all the temperatures from the tmon. creating a new database
@@ -196,6 +165,7 @@ int download(int argc, char *argv[], void *storage) {
 
   return 0;
 }
+*/
 
 
 // CMD: tmon-reset
@@ -204,12 +174,12 @@ int download(int argc, char *argv[], void *storage) {
 int tmon_reset(int argc, char *argv[], void *storage) {
   _storage_cast(st, storage);
   if (argc != 1) return 1;
-  if (st->tmon_fd < 0) {  // i.e. not connected
-    fputs("Error: tmon is not connected\n", stderr);
-    return 2;
-  }
-  serial_handle(serial_cmd(CMD_TEMPERATURES_RESET, NULL, 0, st->tmon_fd),
-      "Could not send CMD packet");
+
+  sh_error_on(!st->serial_ctx, "tmon is not connected", 2);
+  sh_error_on(
+      communication_cmd(st->serial_ctx, CMD_TEMPERATURES_RESET, NULL, 0) != 0,
+      "Could not send CMD packet", 2);
+
   return 0;
 }
 
@@ -219,6 +189,7 @@ int tmon_reset(int argc, char *argv[], void *storage) {
 //        tmon-config get <field>
 //        tmon-config set <field> <value>
 // Manipulate the tmon configuration
+// TODO: Test
 int tmon_config(int argc, char *argv[], void *storage) {
   _storage_cast(st, storage);
   if (argc < 2 || argc > 4) return 1;
@@ -235,24 +206,22 @@ int tmon_config(int argc, char *argv[], void *storage) {
   else if (strcmp(argv[1], "get") == 0) {
     if (argc != 3) return 1;
     config_field_t f;
-    if (config_field_id(argv[2], &f) != 0) {
-      printf("Error: '%s' is not a valid configuration field\n", argv[2]);
-      return 2;
-    }
+    sh_error_on(config_field_id(argv[2], &f) != 0, "Invalid config field", 2);
 
     // Send a CONFIG_GET_FIELD command to the tmon
-    serial_handle(serial_cmd(CMD_CONFIG_GET_FIELD, &f, sizeof(config_field_t), st->tmon_fd),
-        "Could not send CMD packet");
+    sh_error_on(
+        communication_cmd(st->serial_ctx, CMD_CONFIG_GET_FIELD, &f, sizeof(config_field_t)),
+        "Could not send CMD packet", 3);
 
     // Retrieve the field from the tmon
-    packet_t pack_rx;
-    serial_handle(serial_recv(st->tmon_fd, &pack_rx),
-        "Could not receive config field value");
+    packet_t pack_rx[1];
+    sh_error_on(communication_recv(st->serial_ctx, pack_rx),
+        "Could not receive config field value", 3);
 
     // Handle the received config field value
     // We assume that every config field is an integer
-    void *field_val = (void*) pack_rx.data;
-    size_t field_size = pack_rx.size - PACKET_HEADER_SIZE;
+    void *field_val = (void*) pack_rx->data;
+    size_t field_size = packet_get_size(pack_rx) - PACKET_HEADER_SIZE;
     switch (field_size) {
       case 1:
         printf("%s: %hhu\n", argv[2], *((uint8_t*) field_val));
@@ -278,10 +247,7 @@ int tmon_config(int argc, char *argv[], void *storage) {
 
     // Parse the config field to set
     config_field_t f;
-    if (config_field_id(argv[2], &f) != 0) {
-      printf("Error: '%s' is not a valid configuration field\n", argv[2]);
-      return 2;
-    }
+    sh_error_on(config_field_id(argv[2], &f) != 0, "Invalid config field", 2);
 
     // Parse the value for the configuration field
     int value = atoi(argv[3]);
@@ -308,8 +274,9 @@ int tmon_config(int argc, char *argv[], void *storage) {
     }
 
     // Send the proper CMD packet
-    serial_handle(serial_cmd(CMD_CONFIG_SET_FIELD, f_setter, sizeof(_f_setter), st->tmon_fd),
-        "Could not send CMD packet with config setter");
+    sh_error_on(
+        communication_cmd(st->serial_ctx, CMD_CONFIG_SET_FIELD, f_setter, sizeof(_f_setter)),
+        "Could not send CMD packet with config setter", 2);
   }
 
   else return 1;  // Unknown command, error
@@ -320,7 +287,6 @@ int tmon_config(int argc, char *argv[], void *storage) {
 // CMD: tmon-echo
 // Usage: tmon-echo <arg> [arg2 arg3 ...]
 // Send a string to the tmon, which should send it back
-// TODO: Receive a ACK packet
 int tmon_echo(int argc, char *argv[], void *storage) {
   _storage_cast(st, storage);
   if (argc < 2) return 1;
@@ -330,6 +296,7 @@ int tmon_echo(int argc, char *argv[], void *storage) {
   size_t str_len = 0;
   for (int i=1; i < argc; ++i) {
     size_t tok_len = strlen(argv[i]);
+    // TODO: Compact with 'sh_error_on'
     if ((str_len ? str_len + 1 : 0) + tok_len >= PACKET_DATA_MAX_SIZE - 2) {
       fprintf(stderr, "Error: arguments must be at most %d characters long "
           "in total\n", PACKET_DATA_MAX_SIZE - 2);
@@ -342,18 +309,54 @@ int tmon_echo(int argc, char *argv[], void *storage) {
   str[str_len] = '\0';
 
   // Send the string to the tmon with a CMD_ECHO command
-  serial_handle(serial_cmd(CMD_ECHO, str, str_len + 1, st->tmon_fd),
-      "Could not send the string to echo to the tmon");
+  sh_error_on(communication_cmd(st->serial_ctx, CMD_ECHO, str, str_len + 1) != 0,
+      "Could not send the string to echo to the tmon", 3);
 
   // Get the string back from the tmon
   packet_t pack_rx;
-  serial_handle(serial_recv(st->tmon_fd, &pack_rx),
-      "Could not receive the echo string back from the tmon");
+  sh_error_on(communication_recv(st->serial_ctx, &pack_rx),
+      "Could not receive the echo string back from the tmon", 3);
+
+  const unsigned char pack_rx_size_expected = PACKET_HEADER_SIZE +
+    str_len + sizeof(crc_t);
+  const unsigned char pack_rx_size = packet_get_size(&pack_rx);
+  if (pack_rx_size != pack_rx_size_expected) { // TODO: Compact
+    fprintf(stderr, "Error: The received packet is %hhu bytes long, expected %hhu\n",
+        pack_rx_size, pack_rx_size_expected);
+    return 2;
+  }
+  pack_rx.data[str_len] = '\0'; // Substitute first CRC byte with string terminator
 
   // Print the received string and return
-  puts((char*) pack_rx.data); // TODO: Overflow if the string is not NULL-terminated?
+  puts((char*) pack_rx.data);
   return 0;
 }
+
+
+/* TODO: Remove?
+// CMD: tmon-debug-recv
+// Usage: tmon-debug-recv
+// Receive a raw, null-terminated string from the tmon. Used for debug
+int tmon_debug_recv(int argc, char *argv[], void *storage) {
+  _storage_cast(st, storage);
+  if (argc != 1) return 1;
+
+  char *msg = malloc(DEBUG_RECV_MSG_SIZE);
+  if (!msg) {
+    perror("tmon_debug_recv: Allocator failed");
+    return 2;
+  }
+
+  int ret = 0;
+  if (serial_getstring(st->tmon_fd, msg, DEBUG_RECV_MSG_SIZE) < 0) {
+    fputs("Unable to receive raw string from the tmon\n", stderr);
+    ret = 2;
+  }
+
+  free(msg);
+  return ret;
+}
+*/
 
 
 // CMD: list
@@ -406,7 +409,7 @@ int export(int argc, char *argv[], void *storage) {
 
 
 
-// Expose an array of all the commands to the global scope
+// Set of all the shell commands
 static shell_command_t _shell_commands[] = {
   (shell_command_t) { // CMD: echo
     .name = "echo",
@@ -422,13 +425,6 @@ static shell_command_t _shell_commands[] = {
     .exec = connect
   },
 
-  (shell_command_t) { // CMD: reconnect
-    .name = "reconnect",
-    .help = "Usage: reconnect\n"
-      "Reset existing communication session between host and tmon",
-    .exec = reconnect
-  },
-
   (shell_command_t) { // CMD: disconnect
     .name = "disconnect",
     .help = "Usage: disconnect\n"
@@ -436,12 +432,14 @@ static shell_command_t _shell_commands[] = {
     .exec = disconnect
   },
 
+  /*
   (shell_command_t) { // CMD: download
     .name = "download",
     .help = "Usage: download\n"
       "Download all the temperatures from the tmon. creating a new database",
     .exec = download
   },
+  */
 
   (shell_command_t) { // CMD: tmon-reset
     .name = "tmon-reset",
@@ -466,6 +464,15 @@ static shell_command_t _shell_commands[] = {
     .exec = tmon_echo
   },
 
+  /*
+  (shell_command_t) { // CMD: tmon-debug-recv
+    .name = "tmon-debug-recv",
+    .help = "Usage: tmon-debug-recv\n"
+            "Receive a raw, null-terminated string from the tmon",
+    .exec = tmon_debug_recv
+  },
+  */
+
   (shell_command_t) { // CMD: list
     .name = "list",
     .help = "Usage: list\n"
@@ -481,6 +488,6 @@ static shell_command_t _shell_commands[] = {
   }
 };
 
-// This is the exposed one
+// This is the exposed shell commands set
 shell_command_t *shell_commands = _shell_commands;
 size_t shell_commands_count = sizeof(_shell_commands) / sizeof(shell_command_t);

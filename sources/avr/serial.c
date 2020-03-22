@@ -3,24 +3,25 @@
 // Paolo Lucchesi - Fri 09 Aug 2019 07:35:01 PM CEST
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <util/delay.h>
 #include <stddef.h>
 #include "serial.h"
+#include "ringbuffer.h"
 
 
 // RX variables
-volatile uint8_t *rx_buffer = NULL;
-volatile uint8_t rx_received = 0;
-volatile uint8_t rx_size = 0;
-volatile uint8_t rx_ongoing = 0;
+static volatile uint8_t rx_buffer_raw[RX_BUFFER_SIZE];
+static volatile ringbuffer_t rx_buffer[1];
+static uint8_t rx_ongoing;
 
 // TX variables
-volatile uint8_t tx_buffer[TX_BUFFER_SIZE];
-volatile uint8_t tx_to_transmit = 0;
-volatile uint8_t tx_transmitted = 0;
-volatile uint8_t tx_ongoing = 0;
+static volatile uint8_t tx_buffer[TX_BUFFER_SIZE];
+static volatile uint8_t tx_to_transmit;
+static volatile uint8_t tx_transmitted;
+static volatile uint8_t tx_ongoing;
 
 
-// Enable and disable RX and TX interrupts
+// [AUX] Enable and disable RX and TX interrupts
 static inline void rx_sei(void) { UCSR0B |=   1 << RXCIE0 ; }
 static inline void tx_sei(void) { UCSR0B |=   1 << TXCIE0 ; }
 static inline void rx_cli(void) { UCSR0B &= ~(1 << RXCIE0); }
@@ -29,79 +30,95 @@ static inline void tx_cli(void) { UCSR0B &= ~(1 << TXCIE0); }
 
 // Initialize the USART
 void serial_init(void) {
-	// Set baud rate
-	UBRR0H = (uint8_t) (UBRR_VALUE >> 8);
-	UBRR0L = (uint8_t) UBRR_VALUE;
+  // Iniialize RX circular buffer - Ignore errors (there won't be any)
+  ringbuffer_new((ringbuffer_t*) rx_buffer,
+      (uint8_t*) rx_buffer_raw, RX_BUFFER_SIZE);
 
-	// Set the communication frame width (8 bits for us)
-	UCSR0C = (1 << UCSZ01) | (1 << UCSZ00);
+  // Set baud rate
+  UBRR0H = (uint8_t) (UBRR_VALUE >> 8);
+  UBRR0L = (uint8_t) UBRR_VALUE;
 
-	// Enable TX and RX (i.e. duplex communication)
-    // RX and UDRE interrupts are enabled dynamically by 'serial_*x'
-	UCSR0B = (1 << RXEN0) | (1 << TXEN0);
+  // Set the communication frame width (8 bits for us)
+  UCSR0C = (1 << UCSZ01) | (1 << UCSZ00);
+
+  // Enable TX and RX (i.e. duplex communication)
+  // RX and UDRE interrupts are enabled dynamically by 'serial_*x'
+  UCSR0B = (1 << RXEN0) | (1 << TXEN0);
+
+  rx_sei(); // Start receiving immediately
+  //tx_sei(); // TODO
+  rx_ongoing = 1;
 }
 
 
 // RX Interrupt Service Routine
 ISR(USART0_RX_vect) {
-  if (rx_received < rx_size)
-    rx_buffer[rx_received++] = UDR0;
-  if (rx_received >= rx_size) // Now 'rx_received' could be incremented
-    serial_rx_reset();
+  if (!ringbuffer_isfull((ringbuffer_t*) rx_buffer))
+    ringbuffer_push((ringbuffer_t*) rx_buffer, UDR0);
 }
 
 
 // TX Interrupt Service Routine
-//ISR(USART0_UDRE_vect) {
 ISR(USART0_TX_vect) {
+  ++tx_transmitted;
   if (tx_transmitted < tx_to_transmit)
-    UDR0 = tx_buffer[tx_transmitted++];
+    UDR0 = tx_buffer[tx_transmitted];
   else serial_tx_reset();
 }
 
 
 // Receive at most 'size' bytes of data, storing them into an external buffer
-void serial_rx(volatile void *buf, uint8_t size) {
-  if (!buf) return;
-  rx_cli();
+// Returns the number of bytes read
+uint8_t serial_rx(void *buf, uint8_t size) {
+  if (!buf) return 0;
+  uint8_t n;
+  for (n=0; n < size; ++n) {
+    if (ringbuffer_isempty((ringbuffer_t*) rx_buffer))
+      return n;
+    ringbuffer_pop((ringbuffer_t*) rx_buffer, buf + n);
+  }
+  return n;
+}
 
-  // Setup for receiving
-  rx_buffer = buf;
-  rx_received = 0;
-  rx_size = size;
-  rx_ongoing = 1;
-  rx_sei();
+// Same as 'serial_rx', blocking
+// Return the number of bytes read
+uint8_t serial_rx_blocking(void *buf, uint8_t size) {
+  if (!buf) return 0;
+  uint8_t n;
+  for (uint8_t n=0; n < size; ++n) {
+    if (!ringbuffer_isempty((ringbuffer_t*) rx_buffer))
+      ringbuffer_pop((ringbuffer_t*) rx_buffer, buf + n);
+    // TODO: Substitute that ugly '5' with a macro
+    else _delay_ms(5); // Wait a while
+  }
+  return n;
 }
 
 
 // Send data stored in a buffer
 // The data will be copied into another buffer, so it can be reused immediately
-// Returns:
-//   0 -> Success, data has been loaded and the first byte was already sent
-//   1 -> Inconsistent arguments were passed
-//   2 -> The data of the previous call has not been sent entirely yet (no
-//        action done in that case, try later)
+// Returns 0 on success, 1 on failure
+// The function blocks until the previous transmission, if any, is completed,
+// and returns immediately, not waiting for all the data to be already sent
 uint8_t serial_tx(const void *buf, uint8_t size) {
   // Test against inconsistent parameters
-  if (!buf || !size || size > TX_BUFFER_SIZE)
-    return 1;
+  if (!buf || !size || size > TX_BUFFER_SIZE) return 1;
 
-  // Test against unfinished transmission
-  if (tx_ongoing)
-    return 2;
+  // Block until the previous transmission is finished
+  while (tx_ongoing) ;
 
   // Setup for transmission
   tx_ongoing = 1;
   tx_to_transmit = size;
+  tx_transmitted = 0;
   for (int i=0; i < size; ++i)
     tx_buffer[i] = ((uint8_t*) buf)[i];
 
   // Actually send the data -- Send the first byte with busy waiting, the others
   // will be sent by the TX ISR
-  while (! (UCSR0A & (1 << UDRE0)))
+  while (! (UCSR0A & (1 << UDRE0))) // TODO: Remove?
     ;
   UDR0 = tx_buffer[0];
-  tx_transmitted = 1;
 
   // Enable TX Interrupt
   tx_sei();
@@ -111,7 +128,9 @@ uint8_t serial_tx(const void *buf, uint8_t size) {
 
 
 // Return the number of bytes received after the last call to 'serial_rx'
-uint8_t serial_rx_available(void) { return rx_received; }
+uint8_t serial_rx_available(void) {
+  return ringbuffer_used((ringbuffer_t*) rx_buffer);
+}
 
 // Return the number of bytes received after the last call to 'serial_tx'
 uint8_t serial_tx_sent(void) { return tx_transmitted; }
@@ -124,9 +143,9 @@ uint8_t serial_tx_ongoing(void) { return tx_ongoing; }
 // Reset indexes for receiving data from the serial
 void serial_rx_reset(void) {
   rx_cli();
-  rx_buffer = NULL;
-  rx_size = 0;
-  rx_ongoing = 0;
+  ringbuffer_new((ringbuffer_t*) rx_buffer,
+      (uint8_t*) rx_buffer_raw, RX_BUFFER_SIZE); // Reset RX buffer
+  rx_sei();
 }
 
 // Reset indexes for transmitting data with the serial

@@ -18,7 +18,7 @@ static void _start(const void *arg) {
   if (config_get(field, val) != 0)  // Send 0 if the field does not exist
     memset(val, 0, PACKET_DATA_MAX_SIZE);
 
-  com_craft_and_send(PACKET_TYPE_DAT, val, field_size);
+  communication_craft_and_send(PACKET_TYPE_DAT, val, field_size);
 }
 
 static command_t _cmd = {

@@ -9,7 +9,7 @@
 // This data structure is intended to be constant; there are no function to
 // modify or remove temperatures
 typedef struct _temperature_db_s {
-  unsigned id;    // ID of the database (multiple databases will be stored)
+  unsigned id;    // ID of the database (multiple databases can be stored)
   unsigned size;
   char *desc;     // Optional, brief description of the database
   float *items;

@@ -1,14 +1,9 @@
 // avrtmon
 // Non-Volatile Memory interface - Memory image
 // Paolo Lucchesi - Fri 13 Sep 2019 01:41:38 AM CEST
-#ifndef TEST
-#include "nvm.h"
-#else
-#include "nvm_mock.h"
-#endif
-
 #include "temperature.h"
 #include "config.h"
+#include "nvm.h"
 
 
 // The memory image itself

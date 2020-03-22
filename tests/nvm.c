@@ -9,7 +9,9 @@
 // The memory image itself
 nvm_image_t NVMMEM _nvm_image = {
   .config = {
-    //FIELD-NVM-SUBST-HERE
+    .field1 = 1,
+    .field2 = 2,
+    .field3 = 3
   },
   .db = {
     .capacity = TEMP_DB_CAPACITY,

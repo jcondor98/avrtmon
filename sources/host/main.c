@@ -2,6 +2,9 @@
 // Host-side main source file
 // Paolo Lucchesi - Wed 30 Oct 2019 07:24:56 PM CET
 #include <stdio.h>
+#include <assert.h>
+
+#include "communication.h"
 #include "shell.h"
 
 
@@ -16,6 +19,10 @@ int main(int argc, const char *argv[]) {
   // TODO: Define and handle command line arguments (or remove this comment)
   if (argc > 1)
     puts("Warning: no command line arguments are supported at the moment");
+
+  // Initialize communication and serial module
+  // TODO: Handle errors
+  assert(communication_init() == 0);
 
   // Initialize a list which will contain all the temperature DBs
   void *shell_storage = shell_storage_new();

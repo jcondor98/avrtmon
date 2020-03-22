@@ -23,7 +23,7 @@ uint8_t command_exec(command_id_t id, const void *arg) {
     return 1;
 
   if (cmd_table[id]->opmode)
-    com_opmode_switch(cmd_table[id]->opmode);
+    communication_opmode_switch(cmd_table[id]->opmode);
 
   cmd_table[id]->start(arg);
   return 0;

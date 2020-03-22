@@ -5,11 +5,7 @@
 #include <string.h>  // memcpy
 
 #include "temperature.h"
-#ifdef TEST
-#include "nvm_mock.h"
-#else
 #include "nvm.h"
-#endif
 
 
 // Get the address of an arbitrary field in an NVM, passing the field name

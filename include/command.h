@@ -23,14 +23,14 @@ typedef enum COMMAND_ID_E {
 
 // Command payload transported via CMD packet from host to AVR
 typedef struct _command_payload_s {
-  uint8_t id;     // Require a fixed size
+  uint8_t id;     // Command ID
   uint8_t arg[];  // This can be casted to any required type for a specific cmd
 } command_payload_t;
 
 // Command payload argument: set a configuration field to an arbitrary value
 typedef struct _config_setter_s {
-  uint8_t id;
-  uint8_t value[];
+  uint8_t id;       // Configuration field ID
+  uint8_t value[];  // Configuration field value (variable size)
 } config_setter_t;
 
 typedef uint16_t command_download_arg_t;

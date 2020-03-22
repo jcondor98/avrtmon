@@ -33,9 +33,19 @@ OBJECTS += $(patsubst sources/avr/commands/%.c, $(OBJDIR)/commands/%.o, $(wildca
 
 
 # AVR-specific binaries recipes
-%.elf:	$(OBJECTS)
+target/avr/avrtmon.elf:	$(OBJECTS)
 	@echo Objects to compile: $(OBJECTS)
 	$(CC) $(CFLAGS) -o $@ $^
+
+target/avr/test_serial.elf: tests/serial/avr_test_serial.c $(OBJDIR)/serial.o $(OBJDIR)/ringbuffer.o
+	@echo Objects to compile: $(OBJECTS)
+	$(CC) $(CFLAGS) -o $@ $^
+
+target/avr/test_meta.elf: tests/avr_test_meta.c $(OBJDIR)/serial.o $(OBJDIR)/packet.o $(OBJDIR)/crc.o $(OBJDIR)/ringbuffer.o
+	$(CC) $(CFLAGS) -o $@ $^
+
+avr_test_serial: target/avr/test_serial.hex ;
+avr_test_meta: target/avr/test_meta.hex ;
 
 %.eep:	%.elf
 	avr-objcopy -j .eeprom --set-section-flags=.eeprom="alloc,load" \

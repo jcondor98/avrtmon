@@ -25,6 +25,8 @@ int main(int argc, const char *argv[]) {
   printf("avrtmon - AVR Configuration Unit Test\n");
   int ret, expr;
 
+  nvm_mock_init();
+
   // Data structure to store config fields
   config_t cfg_local[1] = { { 0 } };
   void *cfg_local_raw = (void*) cfg_local;

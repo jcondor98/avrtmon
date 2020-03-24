@@ -9,29 +9,21 @@
 #include "config.h"
 #include "temperature.h"
 
-// NVM size
+// NVM size and limit pointer
 #define NVM_SIZE 4096
+#define NVM_LIMIT (((void*) nvm_image) + NVM_SIZE - 1)
 
 // Data type definition for the memory image
 // Defining an ad-hoc type ensures that the data is stored in a precise order
 typedef struct _nvm_image_s {
   config_t config;
-  temperature_db_t db;
-  temperature_t db_items[];
+  temperature_db_seq_t db_seq;
 } nvm_image_t;
-
-// Temperature database capacity
-#define TEMP_DB_CAPACITY ((NVM_SIZE - offsetof(nvm_image_t, db_items)) \
-    / sizeof(temperature_t))
 
 // Image size with and without the DB items buffer
 #define NVM_IMAGE_META_SIZE offsetof(nvm_image_t, db)
 #define NVM_IMAGE_FULL_SIZE (NVM_IMAGE_META_SIZE + \
     TEMP_DB_CAPACITY * sizeof(temperature_t))
-
-// Pointer to the memory image
-// It is safe to expose this as the image will be saved in the .eeprom section
-nvm_image_t *nvm_image;
 
 
 #ifdef TEST // Use mock interface when testing
@@ -42,6 +34,9 @@ nvm_image_t *nvm_image;
 
 // Put a variable in the NVM image, if the operation is supported
 #define NVMMEM EEMEM
+
+// NVM pointer to the memory image (use as a 'nvm_image_t*' variable)
+#define nvm_image _nvm_image_ptr
 
 // Read a block of data to the NVM
 #define nvm_read(dst,src,size) eeprom_read_block(dst,src,size)
@@ -61,5 +56,12 @@ nvm_image_t *nvm_image;
 #define nvm_busy_wait() eeprom_busy_wait()
 
 #endif    // TEST/AVR
+
+
+// Pointer to the memory image
+// It is safe to expose this as the image will be saved in the .eeprom section
+// Do not use this directly if you want to keep a module test-compatible.
+// You should use 'nvm_image' instead
+nvm_image_t *_nvm_image_ptr;
 
 #endif    // __NVM_INTERFACE_H

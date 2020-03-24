@@ -14,13 +14,9 @@ nvm_image_t NVMMEM _nvm_image = {
     .start_pin = 0,
     .stop_pin = 0
   },
-  .db = {
-    .capacity = TEMP_DB_CAPACITY,
-    .used = 0,
-    .items = _nvm_image.db_items
-  }
+  .db_seq = (temperature_db_seq_t) { 0 }
 };
 
 
 // Pointer to the memory image, relative to the .eeprom section
-nvm_image_t *nvm_image = &_nvm_image;
+nvm_image_t *_nvm_image_ptr = &_nvm_image;

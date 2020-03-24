@@ -6,49 +6,54 @@
 #include <stdint.h>
 
 // ID type for a temperature (also used as an index in the temperature db)
-typedef uint16_t id_t;
+typedef uint16_t temperature_id_t;
 
 // Temperature type definition
 // In practice, represent the raw input coming from an LM35 sensor, but the
 // data type could be changed in any moment to store additional informations
 typedef uint16_t temperature_t;
 
-// Should the database be cached in the volatile memory?
-// This avoids performing a NVM read when getting temperatures
-#define TEMP_DB_CACHE
-
 // Temperature database type definition
 typedef struct _temperature_db_s {
-  id_t capacity;
-  id_t used;
-  temperature_t *items;
+  temperature_id_t used;
+  uint8_t id;
+  uint8_t locked; // If 'locked', no other temperatures can be added
+  temperature_t items[];
 } temperature_db_t;
+
+// Treat the NVM allocated space as a sequence of immutable DB objects
+typedef temperature_db_t temperature_db_seq_t;
 
 
 // Setup for using the temperature database
-// Does nothing if DB caching is not enabled
-void temperature_init(void);
+// Returns 0 on success, 1 if there is no space left for a new database
+uint8_t temperature_init(void);
 
-// Register a new temperature
+// Lock the DB currently in use and create a new one
+// Returns 0 on success, 1 on insufficient space
+uint8_t temperature_db_new(void);
+
+// Register a new temperature in the database currently in use
 // Returns 0 on success, 1 otherwise (e.g. if there is no more space)
 uint8_t temperature_register(uint16_t raw_val);
 
 // Get a temperature by id
 // Returns 0 if the temperature exists, 1 otherwise
-uint8_t temperature_get(id_t, temperature_t *dest);
+uint8_t temperature_get(uint8_t db_id, temperature_id_t temp_id,
+    temperature_t *dest);
 
-// Returns the number of temperatures actually present in the database
-id_t temperature_count(void);
+// Get 'ntemps' temperatures in bulk
+// Returns the number of temperatures gotten, starting from 'start'
+temperature_t temperature_get_bulk(uint8_t db_id, temperature_id_t start_id,
+    temperature_id_t ntemps, temperature_t *dest);
 
-// Returns the capacity of the database (in registerable temperatures)
-id_t temperature_capacity(void);
+// Returns the number of temperatures present in all the databases
+temperature_id_t temperature_count_all(void);
 
-// Reset the database, deleting all the temperatures
+// Returns the number of temperatures actually present in a database
+temperature_id_t temperature_count(uint8_t db_id);
+
+// Reset the database list, deleting all the temperatures
 void temperature_db_reset(void);
-
-// Copy the entire database in a data structure provided by the user
-// Returns 0 on success, 1 otherwise
-uint8_t temperature_fetch_entire_db(temperature_db_t *dest_db,
-    temperature_t *dest_items);
 
 #endif    // __TEMPERATURE_DB_H

@@ -12,19 +12,26 @@
 #include "temperature.h"
 #include "nvm.h"
 
-// Maximum usable address for the mock NVM image
-#define NVM_LIMIT (((void*)nvm_image)+NVM_SIZE-1)
 
+unsigned char mock_nvm[NVM_SIZE];
+nvm_image_t *nvm_image = (nvm_image_t*) mock_nvm;
+
+// Initialize mock NVM module
+// Every bit of uninitialized NVM data is set to 1, as in a real EEPROM
+void nvm_mock_init(void) {
+  memcpy(mock_nvm, _nvm_image_ptr, sizeof(nvm_image_t));
+  memset(mock_nvm + sizeof(nvm_image_t), 0xFF, NVM_SIZE - sizeof(nvm_image_t));
+}
 
 void nvm_read(void *dest, const void *src, size_t size) {
-  if (src < ((void*) nvm_image) || src + size - 1 >= NVM_LIMIT)
+  if (src < ((void*) nvm_image) || src + size - 1 > NVM_LIMIT)
     printf("Mock NVM error at function %s with dest=%p src=%p size=%d\n",
         __func__, dest, src, size);
   else memcpy(dest, src, size);
 }
 
 void nvm_write(void *dest, const void *src, size_t size) {
-  if (dest < ((void*) nvm_image) || dest + size - 1 >= NVM_LIMIT)
+  if (dest < ((void*) nvm_image) || dest + size - 1 > NVM_LIMIT)
     printf("Mock NVM error at function %s with dest=%p src=%p size=%d\n",
         __func__, dest, src, size);
   else memcpy(dest, src, size);

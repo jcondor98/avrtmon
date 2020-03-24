@@ -102,7 +102,7 @@ test_list:
 	$(call host_test, $(SRCDIR)/host/list.c)
 
 test_ringbuffer:
-	$(call host_test, $(SRCDIR)/ringbuffer.c)
+	$(call host_test, $(SRCDIR)/avr/ringbuffer.c)
 
 test_meta:
 	$(call host_test)
@@ -114,6 +114,7 @@ test:
 	@make -s test_config
 	@make -s test_temperature
 	#@make -s test_shell
+	@make -s test_ringbuffer
 	@make -s test_list
 
 

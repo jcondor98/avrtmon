@@ -5,14 +5,38 @@
 #define __BUTTONS_HANDLER_H
 #include <stdint.h>
 
+// Identifiers for different pins (used for buttons)
+// Pins are PCINT[0,3], i.e. Digital[53,50] (but might be scaled in future)
+typedef enum BUTTON_PIN_E {
+  D53 = 0, D52, D51, D50
+} button_pin_t;
+#define BUTTON_COUNT 4
+
+// Callback executed on button pression
+typedef void (*button_callback_f)(uint8_t times_pressed)
+
+// Button data type
+typedef struct _button_s {
+  button_callback_f action; // Action performed when a button is pressed
+  volatile uint8_t pressed; // How many times a button have been pressed?
+  uint8_t enabled;          // Enable/Disable callback execution
+} button_t;
+
+
 // Initialize the buttons handler
-void buttons_init(void);
+void button_init(void);
 
 // The buttons handler itself
-// Stops the lmsensor timer and registering if the stop button is pressed and
-// the temperature monitor is running, and vice-versa
-void buttons_handler(void);
+// If one or more buttons have been pressed, the linked callbacks will be executed
+void button_handler(void);
 
+// Set a callback for a button
+// Returns 0 on success, 1 if the button does not exist
+uint8_t button_action_set(button_callback_t);
+
+// Enable/disable interrupt for buttons
+// Returns 0 on success, 1 if the button does not exist
+uint8_t button_enable(button_id_t);
+uint8_t button_disable(button_id_t);
 
 #endif    // __BUTTONS_HANDLER_H
-

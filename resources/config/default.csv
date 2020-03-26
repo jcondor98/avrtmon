@@ -1,4 +1,4 @@
-lm_channel,uint8_t,0
-lm_interval,uint16_t,0
-start_pin,uint8_t,0
-stop_pin,uint8_t,0
+temperature_timer_resolution,uint16_t,1
+temperature_timer_interval,uint16_t,1
+start_pin,uint8_t,D53
+stop_pin,uint8_t,D52

@@ -2,7 +2,6 @@
 // Buttons Handler - Source file
 // Paolo Lucchesi - Tue 29 Oct 2019 11:57:18 AM CET
 #include <avr/interrupt.h>
-#include "lmsensor_timer.h"
 #include "buttons.h"
 
 
@@ -28,7 +27,7 @@ ISR(PCINT0_vect) {
 
 
 // Initialize the buttons handler (just enable PCINT with interrupts on no pins)
-void buttons_init(void) {
+void button_init(void) {
   PCICR = PCIE0;
   PCMSK0 = 0;
 }
@@ -37,7 +36,7 @@ void buttons_init(void) {
 // The buttons handler itself
 // Stops the lmsensor timer and registering if 'status == STATUS_STOPPED' and
 // it is running, and vice-versa
-void buttons_handler(void) {
+void button_handler(void) {
   for (uint8_t id=0; id < BUTTON_COUNT; ++id) {
     if (!buttons[id].enabled || !buttons[id].action || !buttons[id].pressed)
       continue;

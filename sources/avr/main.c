@@ -5,37 +5,54 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
+#include "temperature_daemon.h"
+#include "temperature.h"
 
-//#include "lmsensor_timer.h"
 #include "communication.h"
-//#include "temperature.h"
-//#include "lmsensor.h"
 #include "command.h"
-//#include "buttons.h"
-//#include "config.h"
+
+#include "config.h"
+#include "buttons.h"
 #include "led.h"
 
 
-// Temperature handler
-//extern void temperature_handler(void);
+// Initialize stuff related to the temperature modules
+static inline void temperature_setup(void) {
+  uint16_t resolution, interval;
+  config_get(CFG_TEMPERATURE_TIMER_RESOLUTION, &resolution);
+  config_get(CFG_TEMPERATURE_TIMER_INTERVAL,   &interval);
+
+  uint8_t btn_start, btn_stop;
+  config_get(CFG_START_PIN, &btn_start);
+  config_get(CFG_STOP_PIN,  &btn_stop);
+
+  temperature_init();
+  temperature_daemon_init(resolution, interval);
+  button_action_set(btn_start, temperature_daemon_start);
+  button_action_set(btn_stop,  temperature_daemon_stop);
+  button_enable(btn_start | btn_stop);
+}
 
 
 int main(int argc, const char *argv[]) {
-  // Initialize all modules
-  //config_fetch();
-  //temperature_init();
-  command_init();
-  //buttons_init();
-  communication_init();
+  // Initialize fundamental modules
+  config_fetch();
+  button_init();
   led_init(0x00); // TODO: Use some LEDs
+
+  temperature_setup(); // Initialize all temperature modules
+
+  // Communication and command stuff
+  command_init();
+  communication_init();
 
   sei();
 
   // Main application loop
   while (1) {
-    communication_handler();  // Check for incoming packets
-    //temperature_handler();  // Check for temperatures ready to be registered
-    //buttons_handler();      // Check for AVR-side user interaction
+    communication_handler();      // Check for incoming packets
+    temperature_daemon_handler(); // Check for new temperatures to register
+    button_handler();            // Check for AVR-side user interaction
 
     _delay_ms(200); // TODO: Pause
   }

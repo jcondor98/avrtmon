@@ -5,7 +5,10 @@
 #include <stddef.h> // offsetof
 
 #include "config.h"
+
+#ifdef AVR
 #include "nvm.h"
+#endif
 
 
 // Stuff common to host and AVR

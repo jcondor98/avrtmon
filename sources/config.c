@@ -5,7 +5,10 @@
 #include <stddef.h> // offsetof
 
 #include "config.h"
+
+#ifdef AVR
 #include "nvm.h"
+#endif
 
 
 // Stuff common to host and AVR
@@ -18,8 +21,8 @@ typedef struct _config_field_accessor_s {
 
 // Store metadata to dynamically access configuration fields
 static const config_field_accessor_t cfg_accessors[CONFIG_FIELD_COUNT] = {
-  { .size = sizeof(uint8_t), .offset = offsetof(config_t, lm_channel) },
-  { .size = sizeof(uint16_t), .offset = offsetof(config_t, lm_interval) },
+  { .size = sizeof(uint16_t), .offset = offsetof(config_t, temperature_timer_resolution) },
+  { .size = sizeof(uint16_t), .offset = offsetof(config_t, temperature_timer_interval) },
   { .size = sizeof(uint8_t), .offset = offsetof(config_t, start_pin) },
   { .size = sizeof(uint8_t), .offset = offsetof(config_t, stop_pin) }
 };
@@ -95,8 +98,8 @@ uint8_t config_save_field(config_field_t field) {
 
 // TODO: (maybe) Optimize making this a hash table
 static const char *_config_field_str[] = {
-  "lm_channel",
-  "lm_interval",
+  "temperature_timer_resolution",
+  "temperature_timer_interval",
   "start_pin",
   "stop_pin"
 };

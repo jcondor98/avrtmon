@@ -11,16 +11,16 @@
 
 // Identifiers for each configuration field
 typedef enum CONFIG_FIELD_E {
-  CFG_LM_CHANNEL,
-  CFG_LM_INTERVAL,
+  CFG_TEMPERATURE_TIMER_RESOLUTION,
+  CFG_TEMPERATURE_TIMER_INTERVAL,
   CFG_START_PIN,
   CFG_STOP_PIN
 } config_field_t;
 
 // Type definition for the entire configuration
 typedef struct _config_s {
-  uint8_t lm_channel;
-  uint16_t lm_interval;
+  uint16_t temperature_timer_resolution;
+  uint16_t temperature_timer_interval;
   uint8_t start_pin;
   uint8_t stop_pin;
 } config_t;

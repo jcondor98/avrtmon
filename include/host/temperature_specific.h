@@ -1,9 +1,12 @@
 // avrtmon
-// Temperature database - Head file
+// Host-side specific temperature interface - Head file
 // Paolo Lucchesi - Wed 30 Oct 2019 12:12:31 AM CET
-#ifndef __TEMPERATURE_DB_H
-#define __TEMPERATURE_DB_H
-#include <stdint.h>
+#ifndef __TEMPERATURE_HOST_H
+#define __TEMPERATURE_HOST_H
+
+#ifndef __TEMPERATURE_INTERFACE_H
+#error "Do not use implementation-specific temperature modules directly. Instead, '#include \"temperature.h\"'"
+#endif
 
 // Type definition for a single temperature database
 // This data structure is intended to be constant; there are no function to
@@ -50,4 +53,4 @@ int temperature_db_export(const temperature_db_t *db, const char *fpath);
 // TODO: Do a proper conversion
 float temperature_raw2float(uint16_t raw);
 
-#endif  // __TEMPERATURE_DB_H
+#endif  // __TEMPERATURE_HOST_H

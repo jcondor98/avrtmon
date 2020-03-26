@@ -29,9 +29,6 @@ avrdude_write_flash = -U flash:w:$(strip $(1)):i
 avrdude_write_eeprom = -U eeprom:w:$(strip $(1)):i
 
 
-OBJECTS += $(patsubst sources/avr/commands/%.c, $(OBJDIR)/commands/%.o, $(wildcard sources/avr/commands/*.c))
-
-
 # AVR-specific binaries recipes
 target/avr/avrtmon.elf:	$(OBJECTS)
 	@echo Objects to compile: $(OBJECTS)

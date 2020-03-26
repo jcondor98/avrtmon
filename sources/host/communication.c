@@ -7,9 +7,9 @@
 #include <time.h>
 #include <signal.h>
 
-#include "host/communication.h"
-#include "host/serial.h"
-#include "host/debug.h"
+#include "communication.h"
+#include "serial.h"
+#include "debug.h"
 #include "packet.h"
 
 

@@ -8,15 +8,18 @@
 
 
 // Command starter
-static void _start(const void *arg) {
+// TODO: Assertion on field size?
+static uint8_t _start(const void *arg) {
   const config_setter_t *_arg = arg;
   config_set(_arg->id, _arg->value);
+  return CMD_RET_FINISHED;
 }
 
 
 static command_t _cmd = {
-  .start = _start,
-  .opmode = NULL
+  .start   = _start,
+  .iterate = NULL,
+  .opmode  = NULL
 };
 
 command_t *COMMAND_NAME = &_cmd;

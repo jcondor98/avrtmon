@@ -6,8 +6,8 @@
 #include <string.h>
 #include <errno.h>
 
-#include "host/shell.h"
-#include "host/debug.h"
+#include "shell.h"
+#include "debug.h"
 
 
 // Maximum length for a shell input line

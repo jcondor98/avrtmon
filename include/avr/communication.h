@@ -22,7 +22,8 @@ typedef enum ERR_CODE_E {
 } err_code_t;
 
 // Type definition for a communication operation
-typedef void (*com_operation_f)(const packet_t *rx_pack);
+// TODO: Correct in 'communication_*' ?
+typedef uint8_t (*com_operation_f)(const packet_t *rx_pack);
 typedef com_operation_f* com_opmode_t;
 
 

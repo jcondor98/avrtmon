@@ -162,6 +162,7 @@ uint8_t communication_send(const packet_t *p) {
     if (rto_ongoing) rto_timer_stop();
     if (ret == E_SUCCESS && packet_get_type(response) == PACKET_TYPE_ACK) {
       packet_global_id = packet_next_id(packet_global_id);
+      // TODO: Notify current command successful send
       return 0;
     }
   }
@@ -190,8 +191,9 @@ void communication_handler(void) {
 
   // The incoming packet have been received correctly
   const uint8_t type = packet_get_type(p);
-  if (opmode[type]) opmode[type](p);
-  else opmode_default[type](p);
+  com_operation_f action = opmode[type] ? opmode[type] : opmode_default[type];
+  if (action && action(p) != CMD_RET_ONGOING)
+    communication_opmode_restore();
 }
 
 
@@ -236,25 +238,21 @@ static void rto_timer_stop(void) {
 // Default, built-in communication opmode
 // Operation for PACKET_TYPE_HND -- Reset the communication environment
 // TODO: Restore what is necessary
-static void _op_hnd(const packet_t *rx_pack) {
+static uint8_t _op_hnd(const packet_t *rx_pack) {
   communication_opmode_restore();
   //serial_rx_reset();
   //serial_tx_reset();
+  return CMD_RET_ONGOING;
 }
 
 // Operation for PACKET_TYPE_CMD -- Change operation table and execute command
-static void _op_cmd(const packet_t *rx_pack) {
+static uint8_t _op_cmd(const packet_t *rx_pack) {
   const command_payload_t *payload = (const command_payload_t*) rx_pack->data;
-  command_exec(payload->id, (const void*) payload->arg);
+  command_start(payload->id, (const void*) payload->arg);
+  return CMD_RET_ONGOING;
 }
-
-// For ACK, ERR, CTR and DAT do nothing
-static void _op_ack(const packet_t *rx_pack) {}
-static void _op_err(const packet_t *rx_pack) {}
-static void _op_ctr(const packet_t *rx_pack) {}
-static void _op_dat(const packet_t *rx_pack) {}
 
 // The opmode itself
 static com_operation_f opmode_default[] = {
-  _op_hnd, _op_ack, _op_err, _op_cmd, _op_ctr, _op_dat
+  _op_hnd, NULL, NULL, _op_cmd, NULL, NULL
 };

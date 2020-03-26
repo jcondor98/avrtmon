@@ -49,7 +49,7 @@ void buttons_handler(void) {
 
 // Set a callback for a button (NULL is non-sensical but accepted)
 // Returns 0 on success, 1 if the button does not exist
-uint8_t button_action_set(button_id_t id, button_callback_t action) {
+uint8_t button_action_set(button_pin_t id, button_callback_f action) {
   if (id >= BUTTON_COUNT) return 1;
   if (buttons[id].enabled) button_disable(id);
   buttons[id].pressed = 0;
@@ -60,7 +60,7 @@ uint8_t button_action_set(button_id_t id, button_callback_t action) {
 
 // Enable/disable interrupt for buttons
 // Returns 0 on success, 1 if the button does not exist
-uint8_t button_enable(button_id_t id) {
+uint8_t button_enable(button_pin_t id) {
   if (id >= BUTTON_COUNT)  return 1;
   if (buttons[id].enabled) return 0;
   buttons[id].enabled = 1;
@@ -68,7 +68,7 @@ uint8_t button_enable(button_id_t id) {
   return 0;
 }
 
-uint8_t button_disable(button_id_t id) {
+uint8_t button_disable(button_pin_t id) {
   if (id >= BUTTON_COUNT)   return 1;
   if (!buttons[id].enabled) return 0;
   buttons[id].enabled = 0;

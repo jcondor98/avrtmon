@@ -1,7 +1,7 @@
 // avrtmon
 // Multi-threaded ringbuffer data structure - Source file
 // Paolo Lucchesi - Mon 30 Dec 2019 03:35:41 AM CET
-#include "host/ringbuffer.h" // Also includes pthread library
+#include "ringbuffer.h" // Also includes pthread library
 #include <stdlib.h>
 
 #if defined(TEST) || !defined(AVR)

@@ -10,20 +10,24 @@
 
 
 // Command starter
-static void _start(const void *arg) {
+static uint8_t _start(const void *arg) {
   config_field_t field = *((config_field_t*) arg);
   uint8_t field_size = config_get_size(field);
-
   uint8_t val[field_size];  // Field value will be stored here
-  if (config_get(field, val) != 0)  // Send 0 if the field does not exist
-    memset(val, 0, PACKET_DATA_MAX_SIZE);
 
-  communication_craft_and_send(PACKET_TYPE_DAT, val, field_size);
+  // Send the field value, or an empty CTR packet if the field does not exist
+  if (config_get(field, val) != 0)  
+    communication_craft_and_send(PACKET_TYPE_CTR, NULL, 0);
+  else
+    communication_craft_and_send(PACKET_TYPE_DAT, val, field_size);
+
+  return CMD_RET_FINISHED;
 }
 
 static command_t _cmd = {
-  .start = _start,
-  .opmode = NULL
+  .start   = _start,
+  .iterate = NULL,
+  .opmode  = NULL
 };
 
 command_t *COMMAND_NAME = &_cmd;

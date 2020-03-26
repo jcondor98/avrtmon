@@ -10,28 +10,33 @@
 
 // Command starter
 void _start(const void *arg) {
-  // Put the start command code here
+  // Put the start code here
 }
+
 
 /* Decomment this if you need to define an opmode for the command, else you can
  * delete this snippet
-// Operation for PACKET_TYPE_ACK
-static void _op_ack(void) {
-
+// Single command iteration
+static uint8_t _iterate(const void *arg) {
+  // Put the iteration code here
 }
+*/
 
+
+/* Decomment this if you need to define an opmode for the command, else you can
+ * delete this snippet
 // Operation for PACKET_TYPE_CMD
-static void _op_cmd(void) {
+static uint8_t _op_cmd(const packet_t *p) {
 
 }
 
 // Operation for PACKET_TYPE_CTR
-static void _op_ctr(void) {
+static uint8_t _op_ctr(const packet_t *p) {
 
 }
 
 // Operation for PACKET_TYPE_DAT
-static void _op_dat(void) {
+static uint8_t _op_dat(const packet_t *p) {
 
 }
 
@@ -40,11 +45,12 @@ static void _op_dat(void) {
 // WARNING: With NULL, the communication layer will fallback to a default
 // operation (which is good), but with an existent yet dummy function it won't!
 static const com_operation_f _opmode[] = {
-  NULL, _op_ack, NULL, _op_cmd, _op_ctr, _op_dat
+  NULL, NULL, NULL, _op_cmd, _op_ctr, _op_dat
 };
 */
 
 static command_t COMMAND_NAME = {
-  .start = _start,
-  .opmode = /* _opmode or NULL */;
+  .start   = /* _start   or NULL */;
+  .iterate = /* _iterate or NULL */;
+  .opmode  = /* _opmode  or NULL */;
 };

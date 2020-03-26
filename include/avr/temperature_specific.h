@@ -1,17 +1,12 @@
 // avrtmon
-// Temperature database - Head file
+// AVR-side specific temperature interface - Head file
 // Paolo Lucchesi - Wed 21 Aug 2019 04:14:15 PM CEST
-#ifndef __TEMPERATURE_DB_H
-#define __TEMPERATURE_DB_H
-#include <stdint.h>
+#ifndef __TEMPERATURE_AVR_H
+#define __TEMPERATURE_AVR_H
 
-// ID type for a temperature (also used as an index in the temperature db)
-typedef uint16_t temperature_id_t;
-
-// Temperature type definition
-// In practice, represent the raw input coming from an LM35 sensor, but the
-// data type could be changed in any moment to store additional informations
-typedef uint16_t temperature_t;
+#ifndef __TEMPERATURE_INTERFACE_H
+#error "Do not use implementation-specific temperature modules directly. Instead, '#include \"temperature.h\"'"
+#endif
 
 // Temperature database type definition
 typedef struct _temperature_db_s {
@@ -56,4 +51,8 @@ temperature_id_t temperature_count(uint8_t db_id);
 // Reset the database list, deleting all the temperatures
 void temperature_db_reset(void);
 
-#endif    // __TEMPERATURE_DB_H
+// Craft a 'temperature_db_info_t' struct from an existent database
+// Returns 0 on success, 1 if 'dest' is not valid or the DB does not exist
+uint8_t temperature_db_info(uint8_t db_id, temperature_db_info_t dest);
+
+#endif  // __TEMPERATURE_AVR_H

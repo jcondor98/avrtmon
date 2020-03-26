@@ -10,9 +10,7 @@ void temperature_handler(void) {
   // If no new temperatures are available, return immediately
   if (!lm_available()) return;
 
-  // If the DB is full stop the timer, else try to register a new temperature
-  if (temperature_count() == temperature_capacity())
+  // Stop the timer if there is no space left in the NVM
+  if (temperature_register(lm_getresult()) != 0)
     lm_timer_stop();
-  else
-    temperature_register(lm_getresult());
 }

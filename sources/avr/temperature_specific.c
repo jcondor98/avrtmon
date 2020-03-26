@@ -4,7 +4,7 @@
 #include <stddef.h>  // offsetof macro
 #include <string.h>  // memcpy
 
-#include "avr/temperature.h"
+#include "temperature.h"
 #include "nvm.h"
 
 
@@ -37,10 +37,6 @@ static void _db_fetch(cache_db_t *dest, void *nvm_addr);
 static void _db_sync(const cache_db_t *db);
 #define _db_load(nvm_addr) _db_fetch(&local_db, nvm_addr)
 #define _db_load_next() _db_fetch_next(&local_db, &local_db)
-
-
-// Is the module initialized? (TODO)
-//static uint8_t module_initialized = 0;
 
 
 // Setup for using the temperature database
@@ -168,6 +164,16 @@ void temperature_db_reset(void) {
   local_db.nvm_addr = &nvm_image->db_seq;
   local_db.meta = (temperature_db_t) { 0 };
   _db_sync(&local_db);
+}
+
+
+// Craft a 'temperature_db_info_t' struct from an existent database
+// Returns 0 on success, 1 if some parameter is not valid
+uint8_t temperature_db_info(uint8_t db_id, temperature_db_info_t dest) {
+  if (!dest || _db_fetch_by_id(&local_db_aux, db_id) != 0)
+    return 1;
+  temperature_db_info_pack(dest, local_db_aux.meta.id, local_db_aux.meta.used);
+  return 0;
 }
 
 

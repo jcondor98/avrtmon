@@ -10,8 +10,8 @@
 #include <pthread.h>
 #include <time.h>
 
-#include "host/serial.h"
-#include "host/debug.h"
+#include "serial.h"
+#include "debug.h"
  
 
 #define ONE_MSEC 1000000

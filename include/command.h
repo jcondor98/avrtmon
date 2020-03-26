@@ -21,6 +21,16 @@ typedef enum COMMAND_ID_E {
   CMD_ECHO
 } command_id_t;
 
+// Return value of a command action function
+// A finished command MUST return CMD_RET_FINISHED
+typedef enum COMMAND_RETVAL_E {
+  CMD_RET_FINISHED,         // Finished, communication module must cleanup
+  CMD_RET_ONGOING,
+  CMD_RET_ERROR,
+  CMD_RET_NOT_EXISTS,       // Command ID is not valid
+  CMD_RET_NOT_IMPLEMENTED   // Not an error, 'iterate' is not implemented
+} cmd_retval_t;
+
 // Command payload transported via CMD packet from host to AVR
 typedef struct _command_payload_s {
   uint8_t id;     // Command ID
@@ -38,19 +48,24 @@ typedef uint16_t command_download_arg_t;
 #ifdef AVR
 
 // Command function to be executed as its "launcher"
-typedef void (*command_f)(const void *arg);
+typedef uint8_t (*command_action_f)(const void *arg);
 
 // Command data type definition
 typedef struct _command_s {
-  command_f start;
+  command_action_f start;   // Executed the first time a command is launched
+  command_action_f iterate; // Executed every time the command "receives an event"
   com_opmode_t opmode;
 } command_t;
 
 // Initialize the commands table
 void command_init(void);
 
-// Execute a command, given its ID and an optional argument
-uint8_t command_exec(command_id_t id, const void *arg);
+// Start a command, given its ID and an optional argument
+// This will eventually alter the current opmode
+uint8_t command_start(command_id_t id, const void *arg);
+
+// Execute a single iteration of a command
+uint8_t command_iterate(command_id_t id, const void *arg);
 
 #endif    // AVR specific types and functions
 #endif    // __COMMAND_INTERFACE_H

@@ -6,11 +6,11 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "host/shell.h"
-#include "host/list.h"
-#include "host/serial.h"
-#include "host/temperature.h"
-#include "host/communication.h"
+#include "shell.h"
+#include "list.h"
+#include "serial.h"
+#include "temperature.h"
+#include "communication.h"
 
 
 // Declare a shell_storage_t variable casted from an opaque pointer

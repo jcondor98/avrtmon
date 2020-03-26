@@ -13,7 +13,7 @@ typedef enum BUTTON_PIN_E {
 #define BUTTON_COUNT 4
 
 // Callback executed on button pression
-typedef void (*button_callback_f)(uint8_t times_pressed)
+typedef void (*button_callback_f)(uint8_t times_pressed);
 
 // Button data type
 typedef struct _button_s {
@@ -32,11 +32,11 @@ void button_handler(void);
 
 // Set a callback for a button
 // Returns 0 on success, 1 if the button does not exist
-uint8_t button_action_set(button_callback_t);
+uint8_t button_action_set(button_pin_t id, button_callback_f action);
 
 // Enable/disable interrupt for buttons
 // Returns 0 on success, 1 if the button does not exist
-uint8_t button_enable(button_id_t);
-uint8_t button_disable(button_id_t);
+uint8_t button_enable(button_pin_t);
+uint8_t button_disable(button_pin_t);
 
 #endif    // __BUTTONS_HANDLER_H

@@ -9,8 +9,11 @@
 #endif
 
 // Temperature database type definition
+// A temperature is registered every rto_resolution * reg_interval seconds
 typedef struct _temperature_db_s {
   temperature_id_t used;
+  uint16_t reg_resolution; // Registration timer resolution
+  uint16_t reg_interval;   // Registration timer interval
   uint8_t id;
   uint8_t locked; // If 'locked', no other temperatures can be added
   temperature_t items[];
@@ -21,12 +24,11 @@ typedef temperature_db_t temperature_db_seq_t;
 
 
 // Setup for using the temperature database
-// Returns 0 on success, 1 if there is no space left for a new database
-uint8_t temperature_init(void);
+void temperature_init(void);
 
 // Lock the DB currently in use and create a new one
 // Returns 0 on success, 1 on insufficient space
-uint8_t temperature_db_new(void);
+uint8_t temperature_db_new(uint16_t reg_resolution, uint16_t reg_interval);
 
 // Register a new temperature in the database currently in use
 // Returns 0 on success, 1 otherwise (e.g. if there is no more space)

@@ -30,6 +30,7 @@ ISR(TIMER1_COMPA_vect) {
 
 
 // Initialize the daemon (inlcuding related timer)
+// TODO: Check valid resolution and interval
 void temperature_daemon_init(uint16_t tim_resolution, uint16_t tim_interval) {
   // Set the prescaler to 1024
   TCCR1A = 0;
@@ -44,7 +45,9 @@ void temperature_daemon_init(uint16_t tim_resolution, uint16_t tim_interval) {
 
 // Start/Stop the daemon -- Button friendly (but 'pressed' will be ignored)
 void temperature_daemon_start(uint8_t pressed) {
-  if (timer_ongoing || temperature_db_new() != 0) return;
+  if (timer_ongoing) return;
+  if (temperature_db_new(timer_resolution, timer_interval) != 0)
+    return; // No space left in the NVM -- TODO: Light an LED
   timer_counter = 0;
   td_sei();
   timer_ongoing = 1;

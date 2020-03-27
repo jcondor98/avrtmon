@@ -22,12 +22,15 @@ typedef uint8_t temperature_db_info_t[SIZEOF_TEMPERATURE_DB_INFO];
 
 // Pack a data stucture of fixed, machine-independent size containing info on
 // a temperature database
-uint8_t temperature_db_info_pack(temperature_db_info_t dest,
-    uint8_t id, temperature_id_t count);
+// Returns 0 on success, 1 if 'dest' is not valid
+uint8_t temperature_db_info_pack(temperature_db_info_t dest, uint8_t id,
+    temperature_id_t count, uint16_t reg_resolution, uint16_t reg_interval);
 
 // Extract data from a packet database info structure
+// Returns 0 on success, 1 if 'src' is not valid
+// NULL pointers will be accepted and ignored (and won't cause any error)
 uint8_t temperature_db_info_extract(const temperature_db_info_t src, uint8_t *id,
-    temperature_id_t *count);
+    temperature_id_t *count, uint16_t *reg_resolution, uint16_t *reg_interval);
 
 
 // Import AVR/Host side specific interface

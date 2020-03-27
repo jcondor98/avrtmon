@@ -9,11 +9,14 @@
 #endif
 
 // Type definition for a single temperature database
+// A temperature is registered every rto_resolution * reg_interval seconds
 // This data structure is intended to be constant; there are no function to
 // modify or remove temperatures
 typedef struct _temperature_db_s {
   unsigned id;    // ID of the database (multiple databases can be stored)
   unsigned size;
+  unsigned reg_resolution; // Registration timer resolution
+  unsigned reg_interval;   // Registration timer interval
   char *desc;     // Optional, brief description of the database
   float *items;
 } temperature_db_t;
@@ -21,7 +24,8 @@ typedef struct _temperature_db_s {
 
 // Create a new, empty temperature database
 // Returns a pointer to the new database on success, NULL otherwise
-temperature_db_t *temperature_db_new(unsigned id, unsigned size, char *desc);
+temperature_db_t *temperature_db_new(unsigned id, unsigned size, char *desc,
+    unsigned reg_resolution, unsigned reg_interval);
 
 // Delete (i.e. destroy) a temperature database
 void temperature_db_delete(temperature_db_t *db);

@@ -32,7 +32,6 @@ static void *_db_nvm_addr_next(const cache_db_t *current);
 static void *_db_nvm_addr(uint8_t db_id);
 static uint8_t _db_fetch_next(cache_db_t *dest, const cache_db_t *current);
 static uint8_t _db_fetch_by_id(cache_db_t *dest, uint8_t db_id);
-static uint8_t _db_new(void);
 static void _db_fetch(cache_db_t *dest, void *nvm_addr);
 static void _db_sync(const cache_db_t *db);
 #define _db_load(nvm_addr) _db_fetch(&local_db, nvm_addr)
@@ -40,38 +39,48 @@ static void _db_sync(const cache_db_t *db);
 
 
 // Setup for using the temperature database
-uint8_t temperature_init(void) {
-  // Load first database in memory
-  _db_load(&nvm_image->db_seq);
-
-  // Determine the last used database
-  while (local_db.meta.locked)
-    if (_db_load_next() != 0) {
-      return 1; // TODO: Out of NVM memory
-    }
-
-  // Now, the last used DB is loaded; lock it and create a new one
-  if (_db_new() != 0) {
-    return 1; // TODO: Out of NVM memory
-  }
-
-  // TODO: Start registering?
-  return 0;
+// This just loads the last used DB
+void temperature_init(void) {
+  // Load the last database in memory, locked or not
+  _db_load(&nvm_image->db_seq); // <- First DB
+  while (local_db.meta.locked && _db_load_next() != 0)
+    ;
 }
 
 
 // Lock the DB currently in use and create a new one
 // Returns 0 on success, 1 on insufficient space
-uint8_t temperature_db_new(void) {
-  // TODO: Stop registering
-  return _db_new();
+uint8_t temperature_db_new(uint16_t reg_resolution, uint16_t reg_interval) {
+  if (!local_db.meta.locked && local_db.meta.used == 0)
+    return 0; // No need to create another DB
+
+  // Lock currently loaded DB
+  if (!local_db.meta.locked) {
+    local_db.meta.locked = 1;
+    _db_sync(&local_db);
+  }
+
+  // Compute next DB address and check against insufficient space
+  void *nvm_next = _db_nvm_addr_next(&local_db);
+  if (!nvm_next) return 1; // No more space
+
+  // Create the new database
+  local_db.meta.used = 0;
+  local_db.meta.reg_resolution = reg_resolution;
+  local_db.meta.reg_interval = reg_interval;
+  local_db.meta.id++;
+  local_db.meta.locked = 0;
+  local_db.nvm_addr = nvm_next;
+  _db_sync(&local_db);
+
+  return 0;
 }
 
 
 // Register a new temperature
 // Returns 0 on success, 1 otherwise (e.g. if there is no more space)
 uint8_t temperature_register(uint16_t raw_val) {
-  if (_item_nvm_addr(local_db.nvm_addr, local_db.meta.used)
+  if (local_db.meta.locked || _item_nvm_addr(local_db.nvm_addr, local_db.meta.used)
       + sizeof(temperature_t) - 1 > NVM_LIMIT)
     return 1;
 
@@ -79,7 +88,7 @@ uint8_t temperature_register(uint16_t raw_val) {
   nvm_write(_item_nvm_addr(local_db.nvm_addr, local_db.meta.used),
       &raw_val, sizeof(temperature_t));
   local_db.meta.used++;
-  nvm_busy_wait(); // Useless, but makes the code resilient. Better safe than sorry
+  nvm_busy_wait();
 
   nvm_write(NVM_ADDR_FIELD(local_db.nvm_addr, used),
       &local_db.meta.used, sizeof(local_db.meta.used));
@@ -160,7 +169,6 @@ temperature_id_t temperature_count_all(void) {
 
 // Reset the database sequence, deleting all the temperatures
 void temperature_db_reset(void) {
-  // TODO: Stop registering
   local_db.nvm_addr = &nvm_image->db_seq;
   local_db.meta = (temperature_db_t) { 0 };
   _db_sync(&local_db);
@@ -172,38 +180,11 @@ void temperature_db_reset(void) {
 uint8_t temperature_db_info(uint8_t db_id, temperature_db_info_t dest) {
   if (!dest || _db_fetch_by_id(&local_db_aux, db_id) != 0)
     return 1;
-  temperature_db_info_pack(dest, local_db_aux.meta.id, local_db_aux.meta.used);
+  temperature_db_info_pack(dest, local_db_aux.meta.id, local_db_aux.meta.used,
+      local_db_aux.meta.reg_resolution, local_db_aux.meta.reg_interval);
   return 0;
 }
 
-
-
-// [AUX] Lock the DB loaded in 'local_db' in the NVM and create a new one
-// Returns 0 on success, 1 on insufficient space
-// WARNING: Make sure that temperature registering is not ongoing
-// NOTE: If the last database is empty, consider it as the new one
-static uint8_t _db_new(void) {
-  if (local_db.meta.used == 0) return 0; // No need to create another DB
-
-  // Lock currently loaded DB
-  if (!local_db.meta.locked) {
-    local_db.meta.locked = 1;
-    _db_sync(&local_db);
-  }
-
-  // Compute next DB address and check against insufficient space
-  void *nvm_next = _db_nvm_addr_next(&local_db);
-  if (!nvm_next) return 1; // No more space
-
-  // Create the new database
-  local_db.nvm_addr = nvm_next;
-  local_db.meta.locked = 0;
-  local_db.meta.used = 0;
-  local_db.meta.id++;
-  _db_sync(&local_db);
-
-  return 0;
-}
 
 
 // [AUX] Get the NVM memory address of an arbitrary temperature database
@@ -231,7 +212,7 @@ static void *_db_nvm_addr(uint8_t db_id) {
 static void *_db_nvm_addr_next(const cache_db_t *current) {
   if (!current->meta.locked) return NULL;
   void *next = ((void*) (((temperature_db_t*) current->nvm_addr)->items +
-        current->meta.used)); // TODO
+        current->meta.used));
 
   if (next + sizeof(temperature_db_t) + sizeof(temperature_t) >
       NVM_LIMIT - TEMP_DB_MIN_SIZE)

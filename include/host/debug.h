@@ -49,4 +49,14 @@
   }\
 } while (0);
 
+// If 'expr' is true, print 'err_fmt' and exit from the program
+#define err_check_exit(expr, err_fmt, ...) do {\
+  if (expr) {\
+    eprintf("%s: ", __func__);\
+    eprintf(err_fmt __VA_OPT__(,) __VA_ARGS__);\
+    fputc('\n', stderr);\
+    exit(EXIT_FAILURE);\
+  }\
+} while (0)
+
 #endif    // __DEBUG_H

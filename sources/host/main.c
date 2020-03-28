@@ -2,10 +2,11 @@
 // Host-side main source file
 // Paolo Lucchesi - Wed 30 Oct 2019 07:24:56 PM CET
 #include <stdio.h>
-#include <assert.h>
+#include <stdlib.h> // exit()
 
 #include "communication.h"
 #include "shell.h"
+#include "debug.h"
 
 
 // Import shell commands and specific utlity functions
@@ -21,20 +22,23 @@ int main(int argc, const char *argv[]) {
     puts("Warning: no command line arguments are supported at the moment");
 
   // Initialize communication and serial module
-  // TODO: Handle errors
-  assert(communication_init() == 0);
+  err_check_exit(communication_init() != 0,
+      "Could not initialize communication module");
 
   // Initialize a list which will contain all the temperature DBs
   void *shell_storage = shell_storage_new();
-  if (!shell_storage) {
-    fputs("Error: unable to initialize shell storage\n", stderr);
-    return 1;
-  }
+  err_check_exit(!shell_storage, "Could not initialize shell storage");
 
   // Launch the program command line
   shell_t *shell = shell_new("avrtmon> ", shell_commands,
       shell_commands_count, shell_storage);
+  err_check_exit(!shell, "Could not initialize program shell");
+
+  // Main shell loop
   shell_launch(shell);
+
+  // Perform a clean exit from the program
+  communication_cleanup();
   shell_cleanup(shell);
   shell_delete(shell);
 

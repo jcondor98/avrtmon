@@ -125,7 +125,7 @@ temperature_t temperature_get_bulk(uint8_t db_id, temperature_id_t start_id,
       start_id >= local_db_aux.meta.used)
     return 0;
 
-  temperature_t to_read = local_db_aux.meta.used - start_id; // TODO (but should be fine)
+  temperature_id_t to_read = local_db_aux.meta.used - start_id;
   to_read = to_read >= ntemps ? ntemps : to_read;
   nvm_busy_wait();
   nvm_read(dest, _item_nvm_addr(local_db_aux.nvm_addr, start_id),

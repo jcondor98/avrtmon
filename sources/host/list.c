@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
-#include "list.h"
+#include "host/list.h"
 
 
 // [AUX] Create a new list node
@@ -20,22 +20,24 @@ list_t *list_new(void) {
 }
 
 // Delete (i.e. destroy) a linked list, with all their nodes and relative values
-void list_delete(list_t *l) {
+// 'item_destroyer', if not NULL, will be called on every item of the list. If
+// it is NULL, the C standard allocator's "free()" is used
+void list_delete(list_t *l, void (*item_destroyer)(void*)) {
   if (!l) return;
+  if (!item_destroyer) item_destroyer = free;
   list_node_t *n = l->head;
   while (n) {
     list_node_t *next = n->next;
     if (n->value)
-      free(n->value);
+      item_destroyer(n->value);
+    free(n);
     n = next;
   }
   free(l);
 }
 
 // Return the size of a list
-size_t list_size(list_t *l) {
-  return l ? l->size : 0;
-}
+size_t list_size(list_t *l) { return l ? l->size : 0; }
 
 
 // Add an item to the head of the list
@@ -141,6 +143,22 @@ int list_remove(list_t *l, size_t index, void **value) {
   free(n);
   l->size--;
   return 0;
+}
+
+
+// Concat two lists, i.e. attach 'l2' to the tail of 'l1'
+// 'l2' will be destroyed and must NOT be used after a call to this function
+void list_concat(list_t *l1, list_t *l2) {
+  if (!l1 || !l2) return;
+  if (l2->size != 0) {
+    if (l1->size == 0) memcpy(l1, l2, sizeof(list_t));
+    else {
+      l1->tail->next = l2->head;
+      l1->tail = l2->tail;
+      l1->size += l2->size;
+    }
+  }
+  free(l2);
 }
 
 

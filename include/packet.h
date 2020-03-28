@@ -76,10 +76,13 @@ uint8_t packet_err(const packet_t*, packet_t *dest);
 uint8_t packet_brings_data(const packet_t*);
 
 // Getters for packet header fields
-uint8_t packet_get_header_par(const packet_t *p);
-uint8_t packet_get_type(const packet_t *p);
-uint8_t packet_get_size(const packet_t *p);
-uint8_t packet_get_id(const packet_t *p);
+uint8_t packet_get_header_par(const packet_t*);
+uint8_t packet_get_type(const packet_t*);
+uint8_t packet_get_size(const packet_t*);
+uint8_t packet_get_id(const packet_t*);
+
+// Compute the data size of a packet
+uint8_t packet_data_size(const packet_t*);
 
 // Print out a complete representation of a packet
 #if defined(TEST) || !defined(AVR)

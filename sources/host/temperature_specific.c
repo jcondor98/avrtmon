@@ -1,16 +1,20 @@
 // avrtmon
 // Temperature database - Source file
 // Paolo Lucchesi - Wed 30 Oct 2019 12:24:53 AM CET
+// TODO: Correct
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "temperature.h"
 
+#define MIN(x,y) ((x) > (y) ? (y) : (x))
+
 
 // Create a new, empty temperature database
 // Returns a pointer to the new database on success, NULL otherwise
-temperature_db_t *temperature_db_new(unsigned id, unsigned size, char *desc) {
-  if (!size) return NULL;
+temperature_db_t *temperature_db_new(unsigned id, unsigned size,
+    unsigned reg_resolution, unsigned reg_interval, char *desc) {
+  if (!size || !reg_resolution || !reg_interval) return NULL;
 
   temperature_db_t *db = malloc(sizeof(temperature_db_t));
   if (!db) return NULL;
@@ -18,8 +22,12 @@ temperature_db_t *temperature_db_new(unsigned id, unsigned size, char *desc) {
   *db = (temperature_db_t) {
     .id = id,
     .size = size,
+    .used = 0,
+    .reg_resolution = reg_resolution,
+    .reg_interval = reg_interval,
     .items = malloc(size * sizeof(float))
   };
+
   db->desc = desc ? strdup(desc) : NULL; // Ignore 'strdup()' eventual failure
   if (db->items) return db;
 
@@ -48,17 +56,24 @@ unsigned temperature_db_size(const temperature_db_t *db) {
 // Returns a pointer to 'dest' on success, NULL otherwise
 // NOTE: The copied string won't be NULL-terminated if the desc is longer than
 // the given buffer (see 'man strncpy')
-char *temperature_db_desc(const temperature_db_t *db,
+char *temperature_db_get_desc(const temperature_db_t *db,
     char *dest, size_t dest_size) {
   return (db && db->desc && dest && dest_size) ?
     strncpy(dest, db->desc, dest_size) : NULL;
 }
 
+// Set the description of a database -- 'dest' will be duplicated
+void temperature_db_set_desc(temperature_db_t *db, const char *desc) {
+  if (!db) return;
+  if (db->desc) free(db->desc);
+  db->desc = desc ? strdup(desc) : NULL;
+}
+
 // Register a temperature, given its (wanted) id and its value
 // Returns 0 on success, 1 otherwise
-int temperature_register(temperature_db_t *db, unsigned id, float value) {
-  if (!db || id >= db->size) return 1;
-  db->items[id] = value;
+int temperature_register(temperature_db_t *db, float value) {
+  if (!db || db->used >= db->size) return 1;
+  db->items[db->used++] = value;
   return 0;
 }
 
@@ -68,6 +83,28 @@ int temperature_get(const temperature_db_t *db, unsigned id, float *dest) {
   if (!db || id >= db->size) return 1;
   *dest = db->items[id];
   return 0;
+}
+
+// Get temperatures in bulk
+// Returns the number of temperatures gotten
+unsigned temperature_get_bulk(const temperature_db_t *db, unsigned start_id,
+    unsigned ntemps, float *dest) {
+  if (!db || start_id >= db->used) return 0;
+  unsigned to_get = db->used - start_id;
+  to_get = MIN(to_get, ntemps);
+  memcpy(dest, db->items + start_id, to_get * sizeof(float));
+  return to_get;
+}
+
+// Get temperatures in bulk
+// Returns the number of temperatures registered
+unsigned temperature_register_bulk(temperature_db_t *db,
+    unsigned ntemps, const float *src) {
+  if (!db || db->used >= db->size) return 0;
+  unsigned to_reg = db->size - db->used;
+  to_reg = MIN(to_reg, ntemps);
+  memcpy(db->items + db->used, src, to_reg * sizeof(float));
+  return to_reg;
 }
 
 

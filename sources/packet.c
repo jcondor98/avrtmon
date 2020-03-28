@@ -160,6 +160,12 @@ uint8_t packet_get_header_par(const packet_t *p) {
   return p ? _bitfield_get(p->header[1], 0, 0) : 0;
 }
 
+// Compute the data size of a packet
+uint8_t packet_data_size(const packet_t *p) {
+  return p ? packet_get_size(p) - PACKET_HEADER_SIZE - sizeof(crc_t) : 0;
+}
+
+
 // Setters for packet header fields
 TEST_EXPOSED void packet_set_type(packet_t *p, uint8_t type) {
   p->header[0] = _bitfield_set(p->header[0], type, 4, 7);

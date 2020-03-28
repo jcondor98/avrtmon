@@ -54,9 +54,8 @@ uint8_t config_save_field(config_field_t field);
 #else
 
 // Get a string representing a config field (by config field id)
-// Returns a pointer to a duplicated string relative to the field id, or NULL
-// on failure
-char *config_field_str(config_field_t field);
+// Returns a pointer to a string relative to the field id, or NULL on failure
+const char *config_field_str(config_field_t field);
 
 // Get a config field id given its id
 // On success, 0 is returned and the config field value is written to 'dest'

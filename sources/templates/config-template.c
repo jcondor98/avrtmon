@@ -99,10 +99,9 @@ static const char *_config_field_str[] = {
 };
 
 // Get a string representing a config field (by config field id)
-// Returns a pointer to a duplicated string relative to the field id, or NULL
-// on failure
-char *config_field_str(config_field_t field) {
-  return (field < CONFIG_FIELD_COUNT) ? strdup(_config_field_str[field]) : NULL;
+// Returns a pointer to a string relative to the field id, or NULL on failure
+const char *config_field_str(config_field_t field) {
+  return (field < CONFIG_FIELD_COUNT) ? _config_field_str[field] : NULL;
 }
 
 // Get a config field id given its id

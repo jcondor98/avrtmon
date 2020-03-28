@@ -106,6 +106,7 @@ int serial_close(serial_context_t *ctx) {
   if (pthread_mutex_destroy(ctx->rx.ongoing_lock) != 0) // Destroy RX mutexes
     err_log("Unable to destroy RX ongoing mutex");
 
+  free(ctx);
   return 0;
 }
 

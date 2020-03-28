@@ -23,7 +23,9 @@ typedef struct _list_s {
 list_t *list_new(void);
 
 // Delete (i.e. destroy) a linked list, with all their nodes and relative values
-void list_delete(list_t *l);
+// 'item_destroyer', if not NULL, will be called on every item of the list, for
+// example you can use the C standard library's 'free()'
+void list_delete(list_t *l, void (*item_destroyer)(void*));
 
 // Return the size of a list
 size_t list_size(list_t *l);
@@ -57,6 +59,10 @@ int list_get(list_t *l, size_t index, void **value);
 int list_remove(list_t *l, size_t index, void **value);
 #define list_remove_head(l,v) list_remove(l,0,v)
 #define list_remove_tail(l,v) list_remove(l,list_size(l),v)
+
+// Concat two lists, i.e. attach 'l2' to the tail of 'l1'
+// 'l2' will be destroyed and must NOT be used after a call to this function
+void list_concat(list_t *l1, list_t *l2);
 
 
 // Treat a list as a queue

@@ -67,16 +67,13 @@ uint8_t config_set(config_field_t field_id, const void *value) {
 // Fetch the configuration data structure from the NVM
 // 'src' is the offset in the NVM of the config data structure to fetch
 uint8_t config_fetch(void) {
-  nvm_busy_wait();
   nvm_read(config_raw, NVM_ADDR_CONFIG, sizeof(config_t));
-  nvm_busy_wait();
   return 0;
 }
 
 // Save the entire configuration data structure living in memory to the NVM
 // Returns 0 on success, 1 on error
 uint8_t config_save(void) {
-  nvm_busy_wait();
   nvm_update(NVM_ADDR_CONFIG, config_raw, sizeof(config_t));
   return 0;
 }
@@ -86,8 +83,7 @@ uint8_t config_save(void) {
 uint8_t config_save_field(config_field_t field) {
   if (field >= CONFIG_FIELD_COUNT)
     return 1;
-  nvm_busy_wait();
-  nvm_write(NVM_ADDR_CONFIG + cfg_accessors[field].offset,
+  nvm_update(NVM_ADDR_CONFIG + cfg_accessors[field].offset,
       config_raw + cfg_accessors[field].offset, cfg_accessors[field].size);
   return 0;
 }

@@ -84,15 +84,12 @@ uint8_t temperature_register(uint16_t raw_val) {
       + sizeof(temperature_t) - 1 > NVM_LIMIT)
     return 1;
 
-  nvm_busy_wait();
-  nvm_write(_item_nvm_addr(local_db.nvm_addr, local_db.meta.used),
+  nvm_update(_item_nvm_addr(local_db.nvm_addr, local_db.meta.used),
       &raw_val, sizeof(temperature_t));
   local_db.meta.used++;
-  nvm_busy_wait();
 
-  nvm_write(NVM_ADDR_FIELD(local_db.nvm_addr, used),
+  nvm_update(NVM_ADDR_FIELD(local_db.nvm_addr, used),
       &local_db.meta.used, sizeof(local_db.meta.used));
-  nvm_busy_wait();
 
   return 0;
 }
@@ -106,10 +103,8 @@ uint8_t temperature_get(uint8_t db_id, temperature_id_t temp_id,
       temp_id >= local_db_aux.meta.used)
     return 1;
 
-  nvm_busy_wait();
   nvm_read(dest, _item_nvm_addr(local_db_aux.nvm_addr, temp_id),
       sizeof(temperature_t));
-  nvm_busy_wait();
 
   return 0;
 }
@@ -127,10 +122,8 @@ temperature_t temperature_get_bulk(uint8_t db_id, temperature_id_t start_id,
 
   temperature_id_t to_read = local_db_aux.meta.used - start_id;
   to_read = to_read >= ntemps ? ntemps : to_read;
-  nvm_busy_wait();
   nvm_read(dest, _item_nvm_addr(local_db_aux.nvm_addr, start_id),
       to_read * sizeof(temperature_t));
-  nvm_busy_wait();
 
   return to_read;
 }
@@ -143,10 +136,8 @@ temperature_id_t temperature_count(uint8_t db_id) {
   void *nvm_addr = _db_nvm_addr(db_id);
   if (!nvm_addr) return 0;
 
-  nvm_busy_wait();
   temperature_id_t used;
   nvm_read(&used, NVM_ADDR_FIELD(nvm_addr, used), sizeof(temperature_t));
-  nvm_busy_wait();
 
   return used;
 }
@@ -223,10 +214,8 @@ static void *_db_nvm_addr_next(const cache_db_t *current) {
 
 // [AUX] Fetch an entire database given its base NVM address
 static void _db_fetch(cache_db_t *dest, void *nvm_addr) {
-  nvm_busy_wait();
   nvm_read(&dest->meta, nvm_addr, sizeof(temperature_db_t));
   dest->nvm_addr = nvm_addr;
-  nvm_busy_wait();
 }
 
 
@@ -260,7 +249,5 @@ static void *_item_nvm_addr(void *db_nvm_addr, temperature_id_t t_id) {
 
 // [AUX] Synchronize the modifications between the cache and the actual NVM
 static void _db_sync(const cache_db_t *db) {
-  nvm_busy_wait();
   nvm_update(db->nvm_addr, &db->meta, sizeof(temperature_db_t));
-  nvm_busy_wait();
 }

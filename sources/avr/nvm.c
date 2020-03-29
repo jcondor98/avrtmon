@@ -10,8 +10,8 @@
 // The memory image itself
 nvm_image_t NVMMEM _nvm_image = {
   .config = {
-    .temperature_timer_resolution = 1,
-    .temperature_timer_interval = 1,
+    .temperature_timer_resolution = 1000,
+    .temperature_timer_interval = 10,
     .start_pin = D53,
     .stop_pin = D52
   },

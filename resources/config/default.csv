@@ -1,4 +1,4 @@
-temperature_timer_resolution,uint16_t,1
-temperature_timer_interval,uint16_t,1
+temperature_timer_resolution,uint16_t,1000
+temperature_timer_interval,uint16_t,10
 start_pin,uint8_t,D53
 stop_pin,uint8_t,D52

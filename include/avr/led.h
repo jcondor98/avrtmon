@@ -8,7 +8,8 @@
 // Identifiers for different LEDs
 // Pins of PORTA (i.e. Digital[22,29]) are used
 typedef enum LED_PIN_E {
-  D22 = 0, D23, D24, D25, D26, D27, D28, D29
+  D22 = 0x01, D23 = 1 << 1, D24 = 1 << 2, D25 = 1 << 3,
+  D26 = 1 << 4, D27 = 1 << 5, D28 = 1 << 6, D29 = 1 << 7
 } led_pin_t;
 
 // Initialize the LED module, specifying which LEDs will be used

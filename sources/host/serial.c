@@ -197,7 +197,7 @@ static void *_serial_rx_task(void *arg) {
       unsigned char c = rx_inter_buf[i];
       ringbuffer_push(ctx->rx.buffer, c);
       //debug ringbuffer_print(ctx->rx.buffer);
-      debug err_log("Received byte: 0x%hhx", c);
+      //debug err_log("Received byte: 0x%hhx", c);
     }
   }
 

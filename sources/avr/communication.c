@@ -12,9 +12,8 @@
 #include "serial.h"
 #include "led.h"
 
-// LED signals for errors or notices
-#define led_error() led_blink(100, 5)
-#define led_notice() led_blink(60, 3)
+#define COMMAND_NONE COMMAND_COUNT
+
 
 // Handle packet ids -- Represents the next id expected or to be used
 // The variable name is long on purpose (global variable)
@@ -25,18 +24,27 @@ static volatile uint16_t rto_counter;
 static volatile uint8_t  rto_elapsed; // 1 if it is elapsed, 0 if not
 static volatile uint16_t rto_ongoing;
 
-//static const uint16_t rto = 2 * RTO_DELIVERY_TIME + 4 * RTO_PROCESS_TIME;
-static const uint16_t rto = 500; // Half second
+//static const uint16_t rto = 2 * RTO_DELIVERY_TIME + 4 * RTO_PROCESS_TIME (ms)
+static const uint16_t rto = 500 / RTO_RESOLUTION; // Half second
 
 // Communication Opmode variables
 static com_operation_f opmode_default[];
 static com_opmode_t opmode = opmode_default;
 
-// Start the RTO timer, resetting it if it is ongoing
-static void rto_timer_start(void);
+// Command currently in use
+static command_id_t command_current = COMMAND_NONE;
+static uint8_t command_notified = 0; // Handle command notifications
 
-// Stop the RTO timer
+
+// Start the RTO timer, resetting it if it is ongoing, or stop it
+static void rto_timer_start(void);
 static void rto_timer_stop(void);
+
+// End the current command
+static inline void command_end(void) {
+  command_current = COMMAND_NONE;
+  communication_opmode_restore();
+}
 
 
 // Initialize communication module - Use Timer 3 for packet exchange timing
@@ -79,7 +87,7 @@ static uint8_t _recv_attempt(packet_t *p) {
           // Early fail on mismatching ID
           type = packet_get_type(p);
           id = packet_get_id(p);
-          if ((type == PACKET_TYPE_HND && id != 0) || id != packet_global_id)
+          if ((type == PACKET_TYPE_HND && id != 0) && id != packet_global_id)
             return E_ID_MISMATCH;
           break;
 
@@ -118,20 +126,17 @@ uint8_t communication_recv(packet_t *p) {
         if (packet_get_type(p) == PACKET_TYPE_HND)
           packet_global_id = 1;
         else packet_global_id = packet_next_id(packet_global_id);
-        //debug led_notice();
         return 0;
 
       case E_CORRUPTED_HEADER:
       case E_CORRUPTED_CHECKSUM:
         packet_err(p, response);
         serial_tx(response, PACKET_MIN_SIZE);
-        //serial_rx_reset(); // Discard remaining data to process
+        //serial_rx_reset(); // Discard remaining data to process (TODO)
         rto_timer_stop();
         break;
 
-      default:
-        //debug led_error();
-        break; // Discard on RTO timeout or mismatching ID
+      default: break; // Discard on RTO timeout or mismatching ID
     }
   }
 
@@ -162,7 +167,7 @@ uint8_t communication_send(const packet_t *p) {
     if (rto_ongoing) rto_timer_stop();
     if (ret == E_SUCCESS && packet_get_type(response) == PACKET_TYPE_ACK) {
       packet_global_id = packet_next_id(packet_global_id);
-      // TODO: Notify current command successful send
+      command_notified = 1;
       return 0;
     }
   }
@@ -181,8 +186,15 @@ uint8_t communication_craft_and_send(packet_type_t type, const uint8_t *data,
   return communication_send(p);
 }
 
+
 // Transfer control flow to the communication layer
 void communication_handler(void) {
+  if (command_notified) {
+    command_notified = 0;
+    if (command_iterate(command_current, NULL) != CMD_RET_ONGOING)
+      command_end();
+  }
+
   if (!serial_rx_available()) return;
 
   // If data is available, attempt to receive a new packet
@@ -248,8 +260,11 @@ static uint8_t _op_hnd(const packet_t *rx_pack) {
 // Operation for PACKET_TYPE_CMD -- Change operation table and execute command
 static uint8_t _op_cmd(const packet_t *rx_pack) {
   const command_payload_t *payload = (const command_payload_t*) rx_pack->data;
-  command_start(payload->id, (const void*) payload->arg);
-  return CMD_RET_ONGOING;
+  command_id_t cmd = payload->id;
+  uint8_t ret = command_start(cmd, (const void*) payload->arg);
+  if (ret == CMD_RET_ONGOING)
+    command_current = cmd;
+  return ret;
 }
 
 // The opmode itself

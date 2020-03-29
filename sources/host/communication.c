@@ -84,7 +84,6 @@ int communication_send(serial_context_t *ctx, const packet_t *p) {
 
     // Blindly send the packet on the serial port
     serial_tx(ctx, p, size);
-    debug err_log("Blindly wrote data");
 
     // Attempt to receive ACK/ERR
     // Assertion on ACK/ERR id is made inside the receive attempt function

@@ -247,7 +247,7 @@ int tmon_config(int argc, char *argv[], void *storage) {
     // Handle the received config field value
     // We assume that every config field is an integer
     void *field_val = (void*) pack_rx->data;
-    size_t field_size = packet_get_size(pack_rx) - PACKET_HEADER_SIZE;
+    size_t field_size = packet_data_size(pack_rx);
     switch (field_size) {
       case 1:
         printf("%s: %hhu\n", argv[2], *((uint8_t*) field_val));

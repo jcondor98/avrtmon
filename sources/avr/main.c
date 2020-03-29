@@ -15,6 +15,8 @@
 #include "buttons.h"
 #include "led.h"
 
+#define POWER_ON_LED D22
+
 
 // Initialize stuff related to the temperature modules
 static inline void temperature_setup(void) {
@@ -38,7 +40,8 @@ int main(int argc, const char *argv[]) {
   // Initialize fundamental modules
   config_fetch();
   button_init();
-  led_init(0x00); // TODO: Use some LEDs
+  led_init(POWER_ON_LED); // TODO: Use other LEDs
+  led_on(POWER_ON_LED);
 
   temperature_setup(); // Initialize all temperature modules
 

@@ -11,11 +11,15 @@
 nvm_image_t NVMMEM _nvm_image = {
   .config = {
     .temperature_timer_resolution = 1000,
-    .temperature_timer_interval = 10,
+    .temperature_timer_interval = 1,
     .start_pin = D53,
     .stop_pin = D52
   },
-  .db_seq = (temperature_db_seq_t) { 0 }
+  // TODO: Make this dynamic (the setting below is a mere, temporary workaround
+  .db_seq = (temperature_db_seq_t) {
+    .reg_resolution = 1000,
+    .reg_interval = 2
+  }
 };
 
 

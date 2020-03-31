@@ -41,6 +41,10 @@
   }\
 } while (0)
 
+// Like 'err_check' where 'expr' is assumed to be true
+#define error(err_ret, err_fmt, ...)\
+  err_check(1, err_ret, err_fmt __VA_OPT__(,) __VA_ARGS__)
+
 // If 'expr' is true, perror and return 'err_ret'
 #define err_check_perror(expr, err_ret) do {\
   if (expr) {\

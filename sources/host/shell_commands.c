@@ -5,12 +5,14 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <assert.h>
 
 #include "shell.h"
 #include "list.h"
 #include "serial.h"
 #include "temperature.h"
 #include "communication.h"
+#include "debug.h"
 
 
 // Declare a shell_storage_t variable casted from an opaque pointer
@@ -59,7 +61,7 @@ void shell_cleanup(shell_t *s) {
 
   // Close the connection with the tmon, if any
   if (SERIAL_CTX && serial_close(SERIAL_CTX) != 0)
-    fputs("Error: Could not close the tmon file descriptor\n", stderr);
+    err_log("Could not close the tmon file descriptor");
 
   // Free the storage
   list_delete(st->dbs, _temperature_db_item_destroyer);
@@ -144,7 +146,7 @@ int download(int argc, char *argv[], void *storage) {
   uint8_t db_id;
   uint16_t db_reg_resolution, db_reg_interval;
   temperature_id_t db_size;
-  temperature_db_t *db_current = NULL; // TODO: Not necessary to initialize if first packet is asserted to be CTR
+  temperature_db_t *db_current = NULL;
 
   // Buffer to received packets
   packet_t pack_rx[1];
@@ -162,12 +164,11 @@ int download(int argc, char *argv[], void *storage) {
     unsigned char type = packet_get_type(pack_rx);
     unsigned char data_size = packet_data_size(pack_rx);
 
-    // New database incoming
     if (type == PACKET_TYPE_CTR) {
-      list_add(db_list, db_current);
-
       if (data_size == 0) { // No more data to receive
-        list_concat(st->dbs, db_list);
+        if (list_size(db_list) == 0) // No temperatures were received
+          list_delete(db_list, NULL);
+        else list_concat(st->dbs, db_list);
         return 0;
       }
 
@@ -176,6 +177,8 @@ int download(int argc, char *argv[], void *storage) {
             &db_reg_resolution, &db_reg_interval);
         db_current = temperature_db_new(db_id, db_size,
             db_reg_resolution, db_reg_interval, NULL);
+        assert(db_current);
+        list_add(db_list, db_current);
       }
 
       else break; // Error: unexpected packet data size
@@ -183,8 +186,13 @@ int download(int argc, char *argv[], void *storage) {
 
     // New temperatures incoming -- TODO: Check DB size
     else if (type == PACKET_TYPE_DAT) {
-      const unsigned burst = data_size / sizeof(temperature_db_t);
-      temperature_register_bulk(db_current, burst, (float*) pack_rx->data);
+      const unsigned burst = data_size / sizeof(temperature_t);
+      float converted[burst];
+      assert(burst != 0);
+      assert(db_current);
+      for (size_t i=0; i < burst; ++i)
+        converted[i] = temperature_raw2float(((uint16_t*) pack_rx->data)[i]);
+      temperature_register_bulk(db_current, burst, converted);
     }
 
     else break; // Error: unexpected packet type
@@ -376,8 +384,12 @@ int list(int argc, char *argv[], void *storage) {
       printf("Error while fetching database of index %zu\n\n", i);
       return 2;
     }
-    printf("Database ID: %u\n%s\nNumber of temperatures: %u\n\n",
-        db->id, db->desc, db->size);
+    if (!db) fprintf(stderr, "Error: Database %zu is NULL\n", i);
+    else {
+      printf("Database ID: %u\n", db->id);
+      if (db->desc) printf("%s\n", db->desc);
+      printf("Number of temperatures: %u\n\n", db->size);
+    }
   }
 
   return 0;

@@ -192,23 +192,15 @@ void packet_print(const packet_t *p) {
 
   static const char type_str[PACKET_TYPE_COUNT][4] = {
     "HND", "ACK", "ERR", "CMD", "CTR", "DAT" };
+
   printf("\nPrinting packet\n"
          "Type: %s\n"
          "ID  : %d\n"
-         "Size: %d\n",
-      type >= PACKET_TYPE_COUNT ? "UNKNOWN" : type_str[type], id, size);
+         "Size: %d\n"
+         "CRC : %hhx\n",
+      type >= PACKET_TYPE_COUNT ? "UNKNOWN" : type_str[type], id, size,
+      ((uint8_t*) p)[size - 1]);
 
-  if (packet_brings_data(p)) {
-    printf("Data (hex):");
-    for (uint8_t i=0; i < size - 1; ++i) {
-      if (isprint(p->data[i]))
-        putchar(p->data[i]);
-      else printf(" %hhx", p->data[i]);
-    }
-    putchar('\n');
-  }
-
-  printf("CRC: %hhx\n", ((uint8_t*) p)[size - 1]);
   printf("Raw Data (hex):");
   for (uint8_t i=0; i < size; ++i)
     printf(" %2hhx", ((uint8_t*) p)[i]);

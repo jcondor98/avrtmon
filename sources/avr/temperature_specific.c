@@ -51,8 +51,13 @@ void temperature_init(void) {
 // Lock the DB currently in use and create a new one
 // Returns 0 on success, 1 on insufficient space
 uint8_t temperature_db_new(uint16_t reg_resolution, uint16_t reg_interval) {
-  if (!local_db.meta.locked && local_db.meta.used == 0)
-    return 0; // No need to create another DB
+  if (local_db.meta.used == 0) { // No need to create new DB, use current one
+    if (local_db.meta.locked) {
+      local_db.meta.locked = 0;
+      _db_sync(&local_db);
+    }
+    return 0;
+  }
 
   // Lock currently loaded DB
   if (!local_db.meta.locked) {

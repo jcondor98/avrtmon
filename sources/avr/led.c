@@ -6,9 +6,9 @@
 
 // Initialize the LED module, specifying which LEDs will be used
 // (e.g. if ure using D23 and D24, call led_init(D23 | D24)
-void led_init(uint8_t led_mask) {
-  DDRA |= led_mask;
-  PORTA &= 0x00; // LEDs off
+void led_enable(uint8_t led_mask) {
+  DDRA  |=  led_mask;
+  PORTA &= ~led_mask; // LEDs off
 }
 
 // Turn LEDs on/off -- You can switch multiple LEDs (e.g. led_on(D27 | D26))

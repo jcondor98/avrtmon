@@ -8,7 +8,7 @@
 // Identifiers for different pins (used for buttons)
 // Pins are PCINT[0,3], i.e. Digital[53,50] (but might be scaled in future)
 typedef enum BUTTON_PIN_E {
-  D53 = 1 << 0, D52 = 1 << 1, D51 = 1 << 2, D50 = 1 << 3
+  D53 = 0, D52, D51, D50
 } button_pin_t;
 #define BUTTON_COUNT 4
 

@@ -17,10 +17,10 @@
 
 // Timer entity, i.e. a data structure containing everything related to a timer
 typedef struct _timer_entity_s {
-  timer_t id;
-  struct itimerspec timeval;
   struct sigevent   sig_ev;
-  struct sigaction  sig_act;
+  struct sigaction  sig_act, sig_act_old;
+  struct itimerspec timeval;
+  timer_t id;
   volatile unsigned char elapsed;
   volatile unsigned char ongoing;
 } timer_entity_t;
@@ -49,7 +49,6 @@ int communication_init(void) {
 }
 
 // Cleanup for an initialized communication module
-// TODO: What if the module was not initialized?
 void communication_cleanup(void) {
   rto_timer_destroy();
 }
@@ -76,7 +75,6 @@ int communication_send(serial_context_t *ctx, const packet_t *p) {
   }
 
   // Flush the serial RX buffers before beginning the communication
-  // TODO: Is this effective?
   serial_rx_flush(ctx);
 
   for (uint8_t attempt=0; attempt < MAXIMUM_SEND_ATTEMPTS; ++attempt) {
@@ -228,7 +226,6 @@ static unsigned char _recv_attempt(serial_context_t *ctx, packet_t *p) {
 // Timer interface implementation
 // This part of the communication module uses a POSIX per-process timer, thus
 // it is not reentrant
-// TODO: Check errors
 
 // RTO Signal handler
 static void rto_sig_handler(int sig) {
@@ -240,14 +237,13 @@ static void rto_sig_handler(int sig) {
 
 // Initialize the RTO timer and set a sigaction handler for SIGUSR1
 // Returns 0 on success, 1 on failure
-// TODO: Correct error checking
 static inline int rto_timer_init(void) {
   // Initialize data structure
   rto_timer = (timer_entity_t) {
     .timeval = {
       { 0, 0 }, // One-shot timer
       //{ 0, RTO_RESOLUTION * ONE_MSEC * (2*RTO_DELIVERY_TIME + 4*RTO_PROCESS_TIME) }
-      { 0, 500 * ONE_MSEC } // TODO: Lower?
+      { 0, RTO_VALUE_MSEC * ONE_MSEC }
     },
   .sig_ev  = { SIGEV_SIGNAL, SIGUSR1 },
   .sig_act = (struct sigaction) { .sa_handler = rto_sig_handler }
@@ -257,23 +253,30 @@ static inline int rto_timer_init(void) {
   err_check(timer_create(CLOCK_REALTIME, &rto_timer.sig_ev, &rto_timer.id) != 0,
       1, "Unable to create timer");
 
-  // Handle SIGUSR1 -- TODO: Destroy timer on failure
-  err_check(sigaction(SIGUSR1, &rto_timer.sig_act, NULL) != 0,
-      1, "Unable to set signal handler (sigaction) for SIGUSR1");
+  // Handle SIGUSR1
+  if (sigaction(SIGUSR1, &rto_timer.sig_act, &rto_timer.sig_act_old) != 0) {
+    timer_delete(rto_timer.id);
+    error(1, "Unable to set signal handler (sigaction) for SIGUSR1");
+  }
 
   return 0;
 }
 
+
 static inline void rto_timer_destroy(void) {
-  // TODO: Reset signal handler for SIGUSR1
-  // TODO: Handle ongoing timer
+  if (rto_timer.ongoing)
+    rto_timer_stop();
+
+  // Reset signal handler for SIGUSR1
+  if (sigaction(SIGUSR1, &rto_timer.sig_act_old, NULL) != 0)
+    err_log("Could not reset signal handler for SIGUSR1");
   timer_delete(rto_timer.id);
 }
 
+
 // Start (i.e. arm) the timer
 static void rto_timer_start(void) {
-  if (rto_timer.ongoing)
-    rto_timer_stop();
+  if (rto_timer.ongoing) rto_timer_stop();
   rto_timer.elapsed = 0;
   timer_settime(rto_timer.id, 0, &rto_timer.timeval, NULL);
   //debug err_log("RTO Timer started");

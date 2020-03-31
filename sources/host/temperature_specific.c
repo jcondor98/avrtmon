@@ -1,7 +1,6 @@
 // avrtmon
 // Temperature database - Source file
 // Paolo Lucchesi - Wed 30 Oct 2019 12:24:53 AM CET
-// TODO: Correct
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -104,6 +103,7 @@ unsigned temperature_register_bulk(temperature_db_t *db,
   unsigned to_reg = db->size - db->used;
   to_reg = MIN(to_reg, ntemps);
   memcpy(db->items + db->used, src, to_reg * sizeof(float));
+  db->used += to_reg;
   return to_reg;
 }
 
@@ -132,6 +132,17 @@ int temperature_db_export(const temperature_db_t *db, const char *fpath) {
 
   // Close the file
   return fclose(out) == 0 ? 0 : 1;
+}
+
+
+// Print a database
+void temperature_db_print(const temperature_db_t *db) {
+  if (!db)
+    printf("Tried to print a NULL temperature database\n");
+  else
+    printf("Database %u\n%s\nSize: %u\nUsed: %u\nInterval (ms): %u\n\n",
+        db->id, db->desc ? db->desc : "[No description]", db->size, db->used,
+        db->reg_resolution * db->reg_interval);
 }
 
 

@@ -7,12 +7,17 @@
 #include "serial.h"
 #include "command.h"
 
+/* TODO: Keep or remove?
 // Resolution of the RTO timer in millisecond
 #define RTO_RESOLUTION 6
 
 // Timing Parameters (in RTO_RESOLUTION units)
 #define RTO_DELIVERY_TIME 4 // Time to (only) deliver a packet
 #define RTO_PROCESS_TIME  1 // Time to process a packet (received or to be sent)
+*/
+
+// RTO value in milliseconds
+#define RTO_VALUE_MSEC 500
 
 // Number of maximum attempts to send/receive a single packet
 #define MAXIMUM_SEND_ATTEMPTS 3

@@ -17,7 +17,8 @@ typedef uint16_t temperature_t;
 // To safely share databases metadata, a data structure with a fixed, machine
 // and compiler independent size is used. Do not try to access it directly in
 // any way.
-#define SIZEOF_TEMPERATURE_DB_INFO (sizeof(temperature_id_t) + sizeof(uint8_t))
+#define SIZEOF_TEMPERATURE_DB_INFO\
+  (sizeof(temperature_id_t) + sizeof(uint8_t) + 2*sizeof(uint16_t))
 typedef uint8_t temperature_db_info_t[SIZEOF_TEMPERATURE_DB_INFO];
 
 // Pack a data stucture of fixed, machine-independent size containing info on

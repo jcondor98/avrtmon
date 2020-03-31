@@ -9,7 +9,6 @@
 //             <DAT> Send temperatures in data bursts (i.e. in bulk)
 // 4] [AVR]  If there is another DB, goto [2]
 // 5] [AVR]  <CTR> Piggyback CTR packet with no carried data means end of comm.
-// TODO: Scheduler fairness
 #include "command.h"
 #include "temperature.h"
 #include "communication.h"
@@ -31,14 +30,18 @@ static temperature_t temp_buf[TEMP_BURST];
 // Change DB currently in use
 // Returns 0 on success, 1 if the DB does not exist
 static uint8_t _change_current_db(uint8_t db_id) {
-  if (temperature_db_info(db_id, db_info) != 0) {
-    communication_craft_and_send(PACKET_TYPE_CTR, NULL, 0);
-    return 1;
+  for (uint8_t loading_db = 1; loading_db; ) { // Skip empty DBs
+    if (temperature_db_info(db_id++, db_info) != 0) {
+      communication_craft_and_send(PACKET_TYPE_CTR, NULL, 0);
+      return 1;
+    }
+    temperature_db_info_extract(db_info, &temp_db_id, &temp_count, NULL, NULL);
+    if (temp_count != 0) loading_db = 0;
   }
 
+  // Next non-empty DB successfully loaded
   temp_idx = 0;
-  temperature_db_info_extract(db_info, &temp_db_id, &temp_count);
-  communication_craft_and_send(PACKET_TYPE_CTR, db_info, sizeof(db_info));
+  communication_craft_and_send(PACKET_TYPE_CTR, db_info, SIZEOF_TEMPERATURE_DB_INFO);
   return 0;
 }
 

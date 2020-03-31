@@ -31,18 +31,31 @@ avrdude_write_eeprom = -U eeprom:w:$(strip $(1)):i
 
 # AVR-specific binaries recipes
 target/avr/avrtmon.elf:	$(OBJECTS)
-	@echo Objects to compile: $(OBJECTS)
+	#@echo Objects to compile: $(OBJECTS)
 	$(CC) $(CFLAGS) -o $@ $^
 
 target/avr/test_serial.elf: tests/serial/avr_test_serial.c $(OBJDIR)/serial.o $(OBJDIR)/ringbuffer.o
 	@echo Objects to compile: $(OBJECTS)
 	$(CC) $(CFLAGS) -o $@ $^
 
+target/avr/test_timer.elf: tests/avr_test_timer.c $(OBJDIR)/serial.o $(OBJDIR)/ringbuffer.o
+	@echo Objects to compile: $(OBJECTS)
+	$(CC) $(CFLAGS) -o $@ $^
+
 target/avr/test_meta.elf: tests/avr_test_meta.c $(OBJDIR)/serial.o $(OBJDIR)/packet.o $(OBJDIR)/crc.o $(OBJDIR)/ringbuffer.o
 	$(CC) $(CFLAGS) -o $@ $^
 
+target/avr/test_buttons.elf: tests/avr_test_buttons.c $(OBJDIR)/buttons.o $(OBJDIR)/serial.o $(OBJDIR)/ringbuffer.o
+	$(CC) $(CFLAGS) -o $@ $^
+
+target/avr/test_nvm.elf: tests/avr_test_nvm.c $(OBJDIR)/nvm.o $(OBJDIR)/serial.o $(OBJDIR)/ringbuffer.o
+	$(CC) $(CFLAGS) -o $@ $^
+
+avr_test_buttons: target/avr/test_buttons.hex ;
 avr_test_serial: target/avr/test_serial.hex ;
+avr_test_timer: target/avr/test_timer.hex ;
 avr_test_meta: target/avr/test_meta.hex ;
+avr_test_nvm: target/avr/test_nvm.hex ;
 
 %.eep:	%.elf
 	avr-objcopy -j .eeprom --set-section-flags=.eeprom="alloc,load" \

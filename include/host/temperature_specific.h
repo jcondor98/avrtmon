@@ -66,6 +66,9 @@ unsigned temperature_register_bulk(temperature_db_t *db,
 // Returns 0 on success, 1 otherwise
 int temperature_db_export(const temperature_db_t *db, const char *fpath);
 
+// Print a database
+void temperature_db_print(const temperature_db_t *db);
+
 
 // Convert a raw temperature (i.e. uint16_t) coming from the avrtmon to a float
 // TODO: Do a proper conversion

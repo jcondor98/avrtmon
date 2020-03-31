@@ -32,7 +32,8 @@ static inline void temperature_setup(void) {
   temperature_daemon_init(resolution, interval);
   button_action_set(btn_start, temperature_daemon_start);
   button_action_set(btn_stop,  temperature_daemon_stop);
-  button_enable(btn_start | btn_stop);
+  button_enable(btn_start);
+  button_enable(btn_stop);
 }
 
 
@@ -40,7 +41,7 @@ int main(int argc, const char *argv[]) {
   // Initialize fundamental modules
   config_fetch();
   button_init();
-  led_init(POWER_ON_LED); // TODO: Use other LEDs
+  led_enable(POWER_ON_LED);
   led_on(POWER_ON_LED);
 
   temperature_setup(); // Initialize all temperature modules

@@ -14,6 +14,10 @@ $(TARGET): $(OBJECTS)
 	make -s config_gen
 	$(CC) $(CFLAGS) -o $@ $^
 
+resources/bin/crc_table_generator: resources/crc_table_generator.c $(OBJDIR)/crc.o
+	$(CC) -O2 -I$(INCDIR) -o $@ $^
+
+
 # Host-side testing canned recipe
 define host_test =
 	$(CC) $(CFLAGS) -o tests/bin/$@ tests/$@.c $^ $1 tests/test_framework.c
@@ -26,7 +30,6 @@ define host_test =
 	fi
 	rm tests/bin/$@
 endef
-
 
 host_test_serial: $(OBJDIR)/ringbuffer.o $(OBJDIR)/serial.o
 	$(CC) $(CFLAGS) -o tests/bin/serial_host $^ tests/serial/host_test_serial.c

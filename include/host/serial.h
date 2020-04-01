@@ -19,10 +19,9 @@
 typedef struct _serial_context_s {
   int dev_fd;
   struct {
-    ringbuffer_t    *buffer;
-    pthread_t       thread;
-    pthread_mutex_t ongoing_lock[1];
-    unsigned char   ongoing;
+    ringbuffer_t  *buffer;
+    pthread_t     thread;
+    unsigned char ongoing;
   } rx;
 } serial_context_t;
 

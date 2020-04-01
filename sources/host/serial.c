@@ -18,33 +18,36 @@
 #define context_isvalid(ctx)\
   ((ctx) && (ctx)->dev_fd > 2 && isatty((ctx)->dev_fd))
 
-
-// Auxiliary functions -- Source code at the bottom of this source file
-static int _serial_rx_start(serial_context_t *ctx);
-static void _serial_rx_stop(serial_context_t *ctx);
+// [AUX] RX thread task
+static void *_serial_rx_task(void *arg);
 
 
 // Open a serial device
-// On success, 0 is returned and 'ctx' is correctly initialized
-// On failure, 1 is returned
-// TODO: Free 'ctx' on error
+// Return a pointer to an allocated and initialized context, or NULL on failure
 serial_context_t *serial_open(const char *dev) {
   if (!dev || *dev == '\0') return NULL;
   serial_context_t *ctx = malloc(sizeof(serial_context_t));
   err_check(!ctx, NULL, "Unable to use the memory allocator");
 
+  ctx->rx.buffer = ringbuffer_new(RX_BUF_SIZE);
+  if (!ctx->rx.buffer) {
+    free(ctx);
+    error(NULL, "Unable to use the memory allocator");
+  }
+
   // Open the device file
   if ((ctx->dev_fd = open(dev, O_RDWR | O_NOCTTY)) < 0) {
     perror(__func__);
+    free(ctx->rx.buffer);
     free(ctx);
     return NULL;
   }
 
   if (!isatty(ctx->dev_fd)) {
-    err_log("Device is not a serial TTY");
     close(ctx->dev_fd);
+    free(ctx->rx.buffer);
     free(ctx);
-    return NULL;
+    error(NULL, "Device is not a serial TTY");
   }
 
   // Setup serial device
@@ -59,28 +62,26 @@ serial_context_t *serial_open(const char *dev) {
   dev_io.c_oflag = 0; // TODO: Make this portable
 
   dev_io.c_cflag    |= CS8 | CREAD | CLOCAL; // Read-enabled 8N1
-  dev_io.c_cc[VMIN]  = 1;   // Never make read() calls indefinitely blocking
+  dev_io.c_cc[VMIN]  = 1;   // Read at least 1 character
   dev_io.c_cc[VTIME] = 30;  // Wait at most 3 seconds for a read()
-  //dev_io.c_lflag |= IGNBRK; // Ignore serial BREAK sequence
 
 
   // Set the serial baud rate
   cfsetospeed(&dev_io, BAUD_RATE);
   cfsetispeed(&dev_io, BAUD_RATE);
 
-  // Apply changes made in 'dev_io' (immediately)
+  // Apply changes made in 'dev_io' and flush the RX kernel buffer
   tcsetattr(ctx->dev_fd, TCSANOW, &dev_io);
+  tcflush(ctx->dev_fd, TCIFLUSH);
 
-  // Initialize serial context
-  ctx->rx.buffer = ringbuffer_new(RX_BUF_SIZE);   // TODO: Check errors and free 'ctx'
-  pthread_mutex_init(ctx->rx.ongoing_lock, NULL); // TODO: Check errors and free 'ctx'
-  ctx->rx.ongoing = 0;
-
-  // Flush the kernel internal buffer
-  // TODO: Only flush kernel internal buffer
-  serial_rx_flush(ctx);
-
-  _serial_rx_start(ctx); // Start receiving
+  // Start RX thread
+  ctx->rx.ongoing = 1;
+  if (pthread_create(&ctx->rx.thread, NULL, _serial_rx_task, ctx) != 0) {
+    close(ctx->dev_fd);
+    free(ctx->rx.buffer);
+    free(ctx);
+    error(NULL, "Could not start RX thread");
+  }
 
   return ctx;
 }
@@ -93,18 +94,14 @@ int serial_close(serial_context_t *ctx) {
 
   // Stop and destroy rx thread
   if (ctx->rx.ongoing) {
-    _serial_rx_stop(ctx);
+    pthread_cancel(ctx->rx.thread);
     if (pthread_join(ctx->rx.thread, NULL) != 0)
       err_log("Unable to join RX thread");
   }
 
-  // Close the serial port file descriptor - Don't check errors
+  // Close the serial port file descriptor
   if (close(ctx->dev_fd) != 0)
     err_log("Unable to close device descriptor");
-  ctx->dev_fd = -1; // This serial context is not valid anymore
-
-  if (pthread_mutex_destroy(ctx->rx.ongoing_lock) != 0) // Destroy RX mutexes
-    err_log("Unable to destroy RX ongoing mutex");
 
   free(ctx);
   return 0;
@@ -126,27 +123,21 @@ size_t serial_rx(serial_context_t *ctx, void *dest, size_t size) {
 }
 
 
-// Race-protected getter for 'rx_ongoing' context variable
+// Getter for 'rx_ongoing' context variable
 // Returns 0 if not receiving, 1 otherwise
 unsigned char serial_rx_ongoing(serial_context_t *ctx) {
-  pthread_mutex_lock(ctx->rx.ongoing_lock);
-  int ongoing = ctx->rx.ongoing;
-  pthread_mutex_unlock(ctx->rx.ongoing_lock);
-
-  return ongoing;
+  return context_isvalid(ctx) ? ctx->rx.ongoing : 0;
 }
-
 
 // Get the number of available data to read
 size_t serial_rx_available(serial_context_t *ctx) {
-  if (context_isvalid(ctx) && ctx->rx.ongoing)
-    return ringbuffer_used(ctx->rx.buffer);
-  else return 0;
+  return (context_isvalid(ctx)) ? ringbuffer_used(ctx->rx.buffer) : 0;
 }
+
 
 // Flush the RX buffers (RX thread ringbuffer and kernel internal buffer)
 void serial_rx_flush(serial_context_t *ctx) {
-  if (!ctx) return;
+  if (!context_isvalid(ctx)) return;
   ringbuffer_flush(ctx->rx.buffer); // Flush the RX thread ringbuffer
 
   // Flush the kernel internal buffer for the file descriptor
@@ -154,7 +145,7 @@ void serial_rx_flush(serial_context_t *ctx) {
   // https://bugzilla.kernel.org/show_bug.cgi?id=5730
   static const struct timespec flush_sleep_val = { 0, ONE_MSEC };
   nanosleep(&flush_sleep_val, NULL);
-  tcflush(ctx->dev_fd, TCIOFLUSH); // TODO: TCOFLUSH?
+  tcflush(ctx->dev_fd, TCIFLUSH);
 }
 
 
@@ -173,47 +164,31 @@ ssize_t serial_tx(serial_context_t *ctx, const void *buf, size_t size) {
 }
 
 
-// [AUX] Tell the RX thread to stop receiving data (but do not destroy it)
-static void _serial_rx_stop(serial_context_t *ctx) {
-  pthread_mutex_lock(ctx->rx.ongoing_lock);
-  ctx->rx.ongoing = 0;
-  pthread_mutex_unlock(ctx->rx.ongoing_lock);
-}
-
 
 // [AUX] RX thread task
 // Constantly read data and store it in the RX ringbuffer
-#define RX_INTER_BUF_SIZE 128
+#define RX_INTER_BUF_SIZE 32
 static void *_serial_rx_task(void *arg) {
+  debug err_log("RX now ongoing");
+
   serial_context_t *ctx = arg;
   unsigned char rx_inter_buf[RX_INTER_BUF_SIZE];
 
-  debug err_log("RX now ongoing");
-  while (serial_rx_ongoing(ctx)) {
+  while (1) {
     //debug printf("[RX] New iteration\n");
+
+    // Interruptable read
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
     ssize_t received = read(ctx->dev_fd, rx_inter_buf, RX_INTER_BUF_SIZE);
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+
     if (received < 0) perror(__func__);
-    else for (size_t i=0; i < received; ++i) {
+    else for (size_t i=0; i < received; ++i) { // TODO: Push in bulk
       unsigned char c = rx_inter_buf[i];
       ringbuffer_push(ctx->rx.buffer, c);
-      //debug ringbuffer_print(ctx->rx.buffer);
-      //debug err_log("Received byte: 0x%hhx", c);
+      //debug printf("[RX] Received byte: 0x%hhx\n", c);
     }
   }
 
-  pthread_exit(NULL);
-}
-
-
-// [AUX] Start receiving data in a separated (POSIX) thread
-// Returns 0 if the thread is started and running, 1 otherwise
-static int _serial_rx_start(serial_context_t *ctx) {
-  ctx->rx.ongoing = 1;
-  if (pthread_create(&ctx->rx.thread, NULL, _serial_rx_task, ctx) == 0)
-    return 0;
-
-  // Error on pthread creation
-  ctx->rx.ongoing = 0;
-  err_log("Unable to start new thread");
-  return 1;
+  pthread_exit(NULL); // Never reached
 }

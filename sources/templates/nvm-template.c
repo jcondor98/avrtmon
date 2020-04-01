@@ -2,6 +2,7 @@
 // Non-Volatile Memory interface - Memory image
 // Paolo Lucchesi - Fri 13 Sep 2019 01:41:38 AM CEST
 #include "temperature.h"
+#include "lmsensor.h" // LM pin macros
 #include "buttons.h" // Buttons macros
 #include "config.h"
 #include "nvm.h"

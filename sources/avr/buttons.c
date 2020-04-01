@@ -4,9 +4,6 @@
 #include <avr/interrupt.h>
 #include "buttons.h"
 
-#define OCR_ONE_MSEC 15.625
-#define DEBOUNCE_TIME 500
-
 
 // Buttons used in the module
 button_t buttons[BUTTON_COUNT] = { 0 };
@@ -19,8 +16,6 @@ static const uint8_t pin_mask[] = {
 // Toggle Interrupt enabled flags
 static inline void eint_sei(void) { PCICR |=  (1 << PCIE0); }
 static inline void eint_cli(void) { PCICR &= ~(1 << PCIE0); }
-static inline void tim4_sei(void) { TIMSK4 |=  (1 << OCIE4A); }
-static inline void tim4_cli(void) { TIMSK4 &= ~(1 << OCIE4A); }
 
 
 // External Interrupt ISR
@@ -34,30 +29,12 @@ ISR(PCINT0_vect) {
   buttons[D50].pressed += (portb_in >> D50) & 0x01;
 }
 
-/*
-// Debouncer ISR -- Timer 4 is used
-ISR(TIMER4_COMPA_vect) {
-  if (!(PINB & debouncing_btn_mask)) return;
-  debouncing_btn_mask = 0;
-  debouncing = 0;
-  eint_sei();
-  tim4_cli();
-}
-*/
-
 
 // Initialize the buttons handler (just enable PCINT with interrupts on no pins)
 void button_init(void) {
   // Enable external interrupts
   eint_sei();
   PCMSK0 = 0;
-
-  // Initialize debouncer timer
-  // Set prescaler to 1024
-  TCCR4A = 0;
-  TCCR4B = (1 << WGM52) | (1 << CS50) | (1 << CS52);
-
-  OCR4A = (uint16_t)(OCR_ONE_MSEC * DEBOUNCE_TIME); // Set debounce time
 }
 
 
@@ -74,6 +51,7 @@ void button_handler(void) {
 
 // Set a callback for a button (NULL is non-sensical but accepted)
 // Returns 0 on success, 1 if the button does not exist
+// NOTE: The involved button will be always disabled after this call
 uint8_t button_action_set(button_pin_t id, button_callback_f action) {
   if (id >= BUTTON_COUNT) return 1;
   if (buttons[id].enabled) button_disable(id);
@@ -88,19 +66,52 @@ uint8_t button_action_set(button_pin_t id, button_callback_f action) {
 uint8_t button_enable(button_pin_t id) {
   if (id >= BUTTON_COUNT)  return 1;
   if (buttons[id].enabled) return 0;
+  const register uint8_t mask = pin_mask[id];
   buttons[id].enabled = 1;
-  DDRB   &= ~pin_mask[id];
-  PORTB  |=  pin_mask[id];
-  PCMSK0 |=  pin_mask[id];
+  buttons[id].pressed = 0;
+  DDRB   &= ~mask;
+  PORTB  |=  mask;
+  PCMSK0 |=  mask;
   return 0;
 }
 
 uint8_t button_disable(button_pin_t id) {
   if (id >= BUTTON_COUNT)   return 1;
   if (!buttons[id].enabled) return 0;
+  const register uint8_t mask = pin_mask[id];
   buttons[id].enabled = 0;
-  PCMSK0 &= ~pin_mask[id];
-  PORTB  &= ~pin_mask[id];
-  DDRB   |=  pin_mask[id];
+  PCMSK0 &= ~mask;
+  PORTB  &= ~mask;
+  DDRB   |=  mask;
   return 0;
 }
+
+
+
+/* TODO: Debouncer
+#define OCR_ONE_MSEC 15.625
+#define DEBOUNCE_TIME 500
+
+// To make in the initializer function:
+  // Initialize debouncer timer
+  // Set prescaler to 1024
+  TCCR4A = 0;
+  TCCR4B = (1 << WGM52) | (1 << CS50) | (1 << CS52);
+
+  OCR4A = (uint16_t)(OCR_ONE_MSEC * DEBOUNCE_TIME); // Set debounce time
+
+
+// Toggle debouncer timer interrupt
+static inline void tim4_sei(void) { TIMSK4 |=  (1 << OCIE4A); }
+static inline void tim4_cli(void) { TIMSK4 &= ~(1 << OCIE4A); }
+
+// Debouncer ISR -- Timer 4 is used
+ISR(TIMER4_COMPA_vect) {
+  if (!(PINB & debouncing_btn_mask)) return;
+  debouncing_btn_mask = 0;
+  debouncing = 0;
+  eint_sei();
+  tim4_cli();
+}
+*/
+

@@ -19,16 +19,14 @@ list_t *list_new(void) {
   return l;
 }
 
-// Delete (i.e. destroy) a linked list, with all their nodes and relative values
-// 'item_destroyer', if not NULL, will be called on every item of the list. If
-// it is NULL, the C standard allocator's "free()" is used
+// Delete a linked list, with all their nodes and relative values
+// 'item_destroyer', if not NULL, will be called on every item of the list.
 void list_delete(list_t *l, void (*item_destroyer)(void*)) {
   if (!l) return;
-  if (!item_destroyer) item_destroyer = free;
   list_node_t *n = l->head;
   while (n) {
     list_node_t *next = n->next;
-    if (n->value)
+    if (n->value && item_destroyer)
       item_destroyer(n->value);
     free(n);
     n = next;
@@ -92,6 +90,17 @@ int list_get(list_t *l, size_t index, void **value) {
   *value = n->value;
   return 0;
 }
+
+
+// Get the first item value for which 'predicate' returns true (i.e. !0)
+// If no match is found, NULL is returned
+void *list_find(list_t *l, int (*predicate)(void*)) {
+  if (!l || !predicate) return NULL;
+  for (list_node_t *n=l->head; n; n = n->next)
+    if (predicate(n->value)) return n->value;
+  return NULL;
+}
+
 
 // Remove the 'index'-th element from the list
 // On success, 0 is returned and the removed value is copied into 'value', if
@@ -178,18 +187,3 @@ static inline list_node_t *list_node_get(list_t *l, size_t index) {
     n = n->next;
   return n;
 }
-
-
-
-/* TODO: I shall implement the drafted stuff below when I will need it
-
-// Get the value of a list node by boolean comparator (first match is returned)
-// If no match is found, NULL is returned
-void *list_get_by_match(list_t *l, list_comparator_f cmp) {
-  if (!l || !cmp) return NULL;
-  for (list_node_t *n=l->head; n; n = n->next)
-    if (cmp(n->value)) return n->value;
-  return NULL;
-}
-
-*/

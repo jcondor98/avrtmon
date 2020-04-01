@@ -5,9 +5,9 @@
 #define __TEMPERATURE_DAEMON_H
 #include <stdint.h>
 
-
-// Initialize the daemon (inlcuding related timer)
-void temperature_daemon_init(uint16_t tim_resolution, uint16_t tim_interval);
+// Initialize the daemon (inlcuding related timer and LM sensor)
+void temperature_daemon_init(uint16_t tim_resolution, uint16_t tim_interval,
+    uint8_t lm_adc_pin);
 
 // Start/Stop the daemon -- Button friendly (but 'pressed' will be ignored)
 void temperature_daemon_start(uint8_t pressed);

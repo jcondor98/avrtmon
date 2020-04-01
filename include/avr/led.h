@@ -21,6 +21,4 @@ void led_enable(uint8_t led_mask);
 void led_on(uint8_t led_id);
 void led_off(uint8_t led_id);
 
-// TODO: Add blinking?
-
 #endif  // _LED_INTERFACE_H

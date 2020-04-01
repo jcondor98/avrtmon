@@ -12,9 +12,9 @@ typedef struct _list_node_s {
 
 // Type definition for a linked list
 typedef struct _list_s {
-  size_t size;
   list_node_t *head;
   list_node_t *tail;
+  size_t size;
 } list_t;
 
 
@@ -22,9 +22,8 @@ typedef struct _list_s {
 // Return a pointer to the new, empty list on success, NULL otherwise
 list_t *list_new(void);
 
-// Delete (i.e. destroy) a linked list, with all their nodes and relative values
-// 'item_destroyer', if not NULL, will be called on every item of the list, for
-// example you can use the C standard library's 'free()'
+// Delete a linked list, with all their nodes and relative values
+// 'item_destroyer', if not NULL, will be called on every item of the list.
 void list_delete(list_t *l, void (*item_destroyer)(void*));
 
 // Return the size of a list
@@ -51,6 +50,10 @@ int list_get(list_t *l, size_t index, void **value);
 #define list_get_head(l,v) list_get(l,0,v)
 #define list_get_tail(l,v) list_get(l,list_size(l),v)
 
+// Get the first item value for which 'predicate' returns true (i.e. !0)
+// If no match is found, NULL is returned
+void *list_find(list_t *l, int (*predicate)(void*));
+
 // Remove the 'index'-th element from the list
 // On success, 0 is returned and the removed value is copied into 'value', if
 // specified. On failure, 1 is returned and 'value' is not touched
@@ -71,18 +74,5 @@ typedef list_t queue_t;
 #define queue_push(q,val) list_add_head(q,val)
 #define queue_pop(q,dst) list_remove_tail(q,dst)
 
-
-/* TODO: One day, when I will need, I shall implement the following:
-
-// Type definition for a list item boolean comparator
-// A function of such type must process an item and return 1 if it "match",
-// 0 otherwise
-typedef int (*list_comparator_f)(const void*);
-
-// Get a list node by boolean comparator (first match is returned)
-// If no match is found, NULL is returned
-void *list_get_by_match(list_t *l, const void *key, list_comparator_f cmp);
-
-*/
 
 #endif    // __LINKED_LIST_H

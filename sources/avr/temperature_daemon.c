@@ -9,6 +9,7 @@
 #include "lmsensor.h"
 #include "led.h"
 
+#define MIN_REGISTRATION_INTERVAL 50
 #define TEMPERATURE_REGISTERING_LED D23
 #define OCR_ONE_MSEC 15.625
 
@@ -32,11 +33,12 @@ ISR(TIMER1_COMPA_vect) {
 }
 
 
-// Initialize the daemon (inlcuding related timer)
-// TODO: Check valid resolution and interval
-void temperature_daemon_init(uint16_t tim_resolution, uint16_t tim_interval) {
+// Initialize the daemon (inlcuding related timer and LM sensor)
+void temperature_daemon_init(uint16_t tim_resolution, uint16_t tim_interval,
+    uint8_t lm_adc_pin) {
+  if (tim_resolution * tim_interval < MIN_REGISTRATION_INTERVAL)
+    return;
   led_enable(TEMPERATURE_REGISTERING_LED);
-  led_on(TEMPERATURE_REGISTERING_LED);
 
   // Set the prescaler to 1024
   TCCR1A = 0;
@@ -47,21 +49,23 @@ void temperature_daemon_init(uint16_t tim_resolution, uint16_t tim_interval) {
   timer_resolution = tim_resolution;
   timer_interval = tim_interval;
 
-  lm_init(); // Initialize LM sensor module
-
-  led_off(TEMPERATURE_REGISTERING_LED);
+  // Initialize LM sensor module
+  lm_init(lm_adc_pin);
 }
+
 
 // Start/Stop the daemon -- Button friendly (but 'pressed' will be ignored)
 void temperature_daemon_start(uint8_t pressed) {
-  if (timer_ongoing) return;
+  if (timer_ongoing ||
+      temperature_db_new(timer_resolution, timer_interval) != 0)
+    return;
+
   led_on(TEMPERATURE_REGISTERING_LED);
-  if (temperature_db_new(timer_resolution, timer_interval) != 0)
-    return; // No space left in the NVM -- TODO: Light an LED
   timer_counter = 0;
-  td_sei();
   timer_ongoing = 1;
+  td_sei();
 }
+
 
 void temperature_daemon_stop(uint8_t pressed) {
   td_cli();
@@ -77,16 +81,14 @@ uint8_t temperature_daemon_ongoing(void) { return timer_ongoing; }
 uint16_t temperature_daemon_get_resolution(void) { return timer_resolution; }
 uint16_t temperature_daemon_get_interval(void)   { return timer_interval; }
 
+
 // Handle daemon "notifications", must be run periodically
 // In practice, register new temperatures if there is any
 void temperature_daemon_handler(void) {
   // If no new temperatures are available, return immediately
-  led_off(TEMPERATURE_REGISTERING_LED);
   if (!lm_available()) return;
 
   // Stop the timer if there is no space left in the NVM
   if (temperature_register(lm_getresult()) != 0)
     temperature_daemon_stop(1);
-  _delay_ms(500); // TODO: Remove LEDs and delay
-  led_on(TEMPERATURE_REGISTERING_LED);
 }

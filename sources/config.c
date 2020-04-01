@@ -7,6 +7,7 @@
 #include "config.h"
 
 #ifdef AVR
+//#include "lmsensor.h"
 #include "nvm.h"
 #endif
 
@@ -23,6 +24,7 @@ typedef struct _config_field_accessor_s {
 static const config_field_accessor_t cfg_accessors[CONFIG_FIELD_COUNT] = {
   { .size = sizeof(uint16_t), .offset = offsetof(config_t, temperature_timer_resolution) },
   { .size = sizeof(uint16_t), .offset = offsetof(config_t, temperature_timer_interval) },
+  { .size = sizeof(uint8_t), .offset = offsetof(config_t, lmsensor_pin) },
   { .size = sizeof(uint8_t), .offset = offsetof(config_t, start_pin) },
   { .size = sizeof(uint8_t), .offset = offsetof(config_t, stop_pin) }
 };
@@ -96,6 +98,7 @@ uint8_t config_save_field(config_field_t field) {
 static const char *_config_field_str[] = {
   "temperature_timer_resolution",
   "temperature_timer_interval",
+  "lmsensor_pin",
   "start_pin",
   "stop_pin"
 };

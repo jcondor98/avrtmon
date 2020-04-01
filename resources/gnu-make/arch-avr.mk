@@ -31,7 +31,7 @@ avrdude_write_eeprom = -U eeprom:w:$(strip $(1)):i
 
 # AVR-specific binaries recipes
 target/avr/avrtmon.elf:	$(OBJECTS)
-	#@echo Objects to compile: $(OBJECTS)
+	@#echo Objects to compile: $(OBJECTS)
 	$(CC) $(CFLAGS) -o $@ $^
 
 target/avr/test_serial.elf: tests/serial/avr_test_serial.c $(OBJDIR)/serial.o $(OBJDIR)/ringbuffer.o

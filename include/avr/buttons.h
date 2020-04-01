@@ -30,8 +30,9 @@ void button_init(void);
 // If one or more buttons have been pressed, the linked callbacks will be executed
 void button_handler(void);
 
-// Set a callback for a button
+// Set a callback for a button (NULL is non-sensical but accepted)
 // Returns 0 on success, 1 if the button does not exist
+// NOTE: The involved button will be always disabled after this call
 uint8_t button_action_set(button_pin_t id, button_callback_f action);
 
 // Enable/disable interrupt for buttons

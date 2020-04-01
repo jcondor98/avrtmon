@@ -5,8 +5,14 @@
 #define __LM_SENSOR_LAYER_H
 #include <stdint.h>
 
+// Configurable ADC analog pin used for the LM35
+typedef enum ADC_PIN_E {
+  A0 = 0, A1, A2, A3, A4, A5, A6, A7
+} adc_pin_t;
+
+
 // Initialize ADC and other required stuff
-void lm_init(void);
+void lm_init(uint8_t adc_pin);
 
 // Start a conversion (and return 0)
 // If the ADC is busy, do not start the conversion and return 1

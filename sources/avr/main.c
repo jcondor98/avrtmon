@@ -28,8 +28,11 @@ static inline void temperature_setup(void) {
   config_get(CFG_START_PIN, &btn_start);
   config_get(CFG_STOP_PIN,  &btn_stop);
 
+  uint8_t lm_pin;
+  config_get(CFG_LMSENSOR_PIN, &lm_pin);
+
   temperature_init();
-  temperature_daemon_init(resolution, interval);
+  temperature_daemon_init(resolution, interval, lm_pin);
   button_action_set(btn_start, temperature_daemon_start);
   button_action_set(btn_stop,  temperature_daemon_stop);
   button_enable(btn_start);
@@ -41,8 +44,6 @@ int main(int argc, const char *argv[]) {
   // Initialize fundamental modules
   config_fetch();
   button_init();
-  led_enable(POWER_ON_LED);
-  led_on(POWER_ON_LED);
 
   temperature_setup(); // Initialize all temperature modules
 
@@ -50,13 +51,15 @@ int main(int argc, const char *argv[]) {
   command_init();
   communication_init();
 
+  led_enable(POWER_ON_LED);
+  led_on(POWER_ON_LED);
   sei();
 
   // Main application loop
   while (1) {
     communication_handler();      // Check for incoming packets
     temperature_daemon_handler(); // Check for new temperatures to register
-    button_handler();            // Check for AVR-side user interaction
+    button_handler();             // Check for AVR-side user interaction
 
     _delay_ms(200); // TODO: Pause
   }

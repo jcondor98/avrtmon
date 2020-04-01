@@ -8,6 +8,8 @@
 #include "serial.h"
 #include "ringbuffer.h"
 
+// Polling time for blocking RX in milliseconds
+#define RX_BLOCKING_POLLING_TIME_MS 5
 
 // RX variables
 static volatile uint8_t rx_buffer_raw[RX_BUFFER_SIZE];
@@ -15,16 +17,16 @@ static volatile ringbuffer_t rx_buffer[1];
 static uint8_t rx_ongoing;
 
 // TX variables
-static volatile uint8_t tx_buffer[TX_BUFFER_SIZE];
-static volatile uint8_t tx_to_transmit;
+static uint8_t tx_buffer[TX_BUFFER_SIZE];
+static uint8_t tx_to_transmit;
 static volatile uint8_t tx_transmitted;
 static volatile uint8_t tx_ongoing;
 
 
 // [AUX] Enable and disable RX and TX interrupts
 static inline void rx_sei(void) { UCSR0B |=   1 << RXCIE0 ; }
-static inline void tx_sei(void) { UCSR0B |=   1 << TXCIE0 ; }
 static inline void rx_cli(void) { UCSR0B &= ~(1 << RXCIE0); }
+static inline void tx_sei(void) { UCSR0B |=   1 << TXCIE0 ; }
 static inline void tx_cli(void) { UCSR0B &= ~(1 << TXCIE0); }
 
 
@@ -46,7 +48,6 @@ void serial_init(void) {
   UCSR0B = (1 << RXEN0) | (1 << TXEN0);
 
   rx_sei(); // Start receiving immediately
-  //tx_sei(); // TODO
   rx_ongoing = 1;
 }
 
@@ -88,8 +89,7 @@ uint8_t serial_rx_blocking(void *buf, uint8_t size) {
   for (uint8_t n=0; n < size; ++n) {
     if (!ringbuffer_isempty((ringbuffer_t*) rx_buffer))
       ringbuffer_pop((ringbuffer_t*) rx_buffer, buf + n);
-    // TODO: Substitute that ugly '5' with a macro
-    else _delay_ms(5); // Wait a while
+    else _delay_ms(RX_BLOCKING_POLLING_TIME_MS); // Wait a while
   }
   return n;
 }
@@ -114,14 +114,10 @@ uint8_t serial_tx(const void *buf, uint8_t size) {
   for (int i=0; i < size; ++i)
     tx_buffer[i] = ((uint8_t*) buf)[i];
 
-  // Actually send the data -- Send the first byte with busy waiting, the others
-  // will be sent by the TX ISR
-  while (! (UCSR0A & (1 << UDRE0))) // TODO: Remove?
-    ;
-  UDR0 = tx_buffer[0];
-
-  // Enable TX Interrupt
+  // Enable TX interrupt, and send the first byte;
+  // the others will be sent by the TX ISR
   tx_sei();
+  UDR0 = tx_buffer[0];
 
   return 0;
 }
@@ -143,8 +139,7 @@ uint8_t serial_tx_ongoing(void) { return tx_ongoing; }
 // Reset indexes for receiving data from the serial
 void serial_rx_reset(void) {
   rx_cli();
-  ringbuffer_new((ringbuffer_t*) rx_buffer,
-      (uint8_t*) rx_buffer_raw, RX_BUFFER_SIZE); // Reset RX buffer
+  ringbuffer_flush((ringbuffer_t*) rx_buffer);
   rx_sei();
 }
 

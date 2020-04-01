@@ -108,7 +108,7 @@ uint8_t packet_check_header(const packet_t *p) {
   if (p && packet_get_size(p) >= PACKET_MIN_SIZE && (packet_brings_data(p) ||
         packet_get_size(p) == PACKET_MIN_SIZE) && packet_header_parity(p) == 0)
     return 0;
-  else return 1;
+  return 1;
 }
 
 
@@ -117,24 +117,27 @@ uint8_t packet_check_header(const packet_t *p) {
 // Also works as a check, must return 0 (i.e. bits are even) if the packet
 // header is not corrupted by a single bit flip
 uint8_t packet_header_parity(const packet_t *packet) {
+  if (!packet) return 0;
+  const uint8_t *p = (const uint8_t*) packet;
+
   // Count set bits in a nibble in constant time
   static const uint8_t nibble_bitcount_tab[] = {
     0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4
   };
 
-  if (!packet) return 0;
-  const uint8_t *p = (const uint8_t*) packet;
-
-  // Compute parity - loop unrolled
-  // NOTE: Works until the size of the header is changed
-#if PACKET_HEADER_SIZE != 2
-#error "Packet header must have size == 2 for a loop unrolled parity check"
-#endif
+  // Compute parity - loop unrolled optimized if PACKET_HEADER_SIZE == 2
   uint8_t bits_set = 0;
+#if PACKET_HEADER_SIZE == 2
   bits_set += nibble_bitcount_tab[p[0] & 0x0F];
   bits_set += nibble_bitcount_tab[p[0] >> 4  ];
   bits_set += nibble_bitcount_tab[p[1] & 0x0F];
   bits_set += nibble_bitcount_tab[p[1] >> 4  ];
+#else
+  for (uint8_t i=0; i < PACKET_HEADER_SIZE; ++i) {
+    bits_set += nibble_bitcount_tab[p[i] & 0x0F];
+    bits_set += nibble_bitcount_tab[p[i] >> 4  ];
+  }
+#endif
 
   return bits_set % 2;
 }

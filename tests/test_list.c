@@ -96,6 +96,7 @@ int main(int argc, const char *argv[]) {
   test_expr(l->size == TEST_ITEMS_MAX, "List size should be consistent");
 
 
+  list_delete(l, NULL);
   test_summary();
   return 0;
 }

@@ -27,13 +27,13 @@ cache_db_t local_db, local_db_aux;
   (((void*) db_nvm_addr) + offsetof(temperature_db_t, field))
 
 // Auxiliary functions -- See at the bottom of this source file
-static void *_item_nvm_addr(void *db_nvm_addr, temperature_id_t t_id);
+static inline void *_item_nvm_addr(void *db_nvm_addr, temperature_id_t t_id);
+static inline void *_db_nvm_addr(uint8_t db_id);
 static void *_db_nvm_addr_next(const cache_db_t *current);
-static void *_db_nvm_addr(uint8_t db_id);
 static uint8_t _db_fetch_next(cache_db_t *dest, const cache_db_t *current);
 static uint8_t _db_fetch_by_id(cache_db_t *dest, uint8_t db_id);
-static void _db_fetch(cache_db_t *dest, void *nvm_addr);
-static void _db_sync(const cache_db_t *db);
+static inline void _db_fetch(cache_db_t *dest, void *nvm_addr);
+static inline void _db_sync(const cache_db_t *db);
 #define _db_load(nvm_addr) _db_fetch(&local_db, nvm_addr)
 #define _db_load_next() _db_fetch_next(&local_db, &local_db)
 
@@ -52,10 +52,10 @@ void temperature_init(void) {
 // Returns 0 on success, 1 on insufficient space
 uint8_t temperature_db_new(uint16_t reg_resolution, uint16_t reg_interval) {
   if (local_db.meta.used == 0) { // No need to create new DB, use current one
-    if (local_db.meta.locked) {
-      local_db.meta.locked = 0;
-      _db_sync(&local_db);
-    }
+    local_db.meta.locked = 0;
+    local_db.meta.reg_resolution = reg_resolution;
+    local_db.meta.reg_interval = reg_interval;
+    _db_sync(&local_db);
     return 0;
   }
 
@@ -155,7 +155,8 @@ temperature_id_t temperature_count_all(void) {
   _db_fetch(&local_db_aux, &nvm_image->db_seq);
   while (local_db_aux.meta.locked) {
     count += local_db_aux.meta.used;
-    _db_fetch_next(&local_db_aux, &local_db_aux);
+    if (_db_fetch_next(&local_db_aux, &local_db_aux) != 0)
+      return count;
   }
 
   count += local_db_aux.meta.used;
@@ -163,10 +164,14 @@ temperature_id_t temperature_count_all(void) {
 }
 
 
-// Reset the database sequence, deleting all the temperatures
+// Reset the database sequence, deleting all temperatures
 void temperature_db_reset(void) {
+  uint16_t last_res = local_db.meta.reg_resolution;
+  uint16_t last_int = local_db.meta.reg_interval;
   local_db.nvm_addr = &nvm_image->db_seq;
-  local_db.meta = (temperature_db_t) { 0 };
+  local_db.meta = (temperature_db_t) {
+    .reg_resolution = last_res, .reg_interval = last_int
+  };
   _db_sync(&local_db);
 }
 
@@ -218,7 +223,7 @@ static void *_db_nvm_addr_next(const cache_db_t *current) {
 
 
 // [AUX] Fetch an entire database given its base NVM address
-static void _db_fetch(cache_db_t *dest, void *nvm_addr) {
+static inline void _db_fetch(cache_db_t *dest, void *nvm_addr) {
   nvm_read(&dest->meta, nvm_addr, sizeof(temperature_db_t));
   dest->nvm_addr = nvm_addr;
 }
@@ -247,12 +252,12 @@ static uint8_t _db_fetch_by_id(cache_db_t *dest, uint8_t db_id) {
 
 // [AUX] Get the NVM address of a temperature item (giving its NVM DB address)
 // Deliberately don't check for errors
-static void *_item_nvm_addr(void *db_nvm_addr, temperature_id_t t_id) {
+static inline void *_item_nvm_addr(void *db_nvm_addr, temperature_id_t t_id) {
   return ((temperature_db_t*) db_nvm_addr)->items + t_id;
 }
 
 
 // [AUX] Synchronize the modifications between the cache and the actual NVM
-static void _db_sync(const cache_db_t *db) {
+static inline void _db_sync(const cache_db_t *db) {
   nvm_update(db->nvm_addr, &db->meta, sizeof(temperature_db_t));
 }

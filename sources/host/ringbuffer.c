@@ -65,10 +65,9 @@ ringbuffer_t *ringbuffer_new(size_t size) {
 
 
 // Delete a ringbuffer
-// TODO: What if 'lock' is in use?
 void ringbuffer_delete(ringbuffer_t *rb) {
   if (!rb) return;
-  pthread_mutex_destroy(rb->lock);
+  pthread_mutex_destroy(rb->lock); // Ignore errors
   free(rb->base);
   free(rb);
 }
@@ -79,16 +78,12 @@ void ringbuffer_delete(ringbuffer_t *rb) {
 size_t ringbuffer_size(ringbuffer_t *rb) { return rb ? rb->size : 0; }
 
 // Get the number of present items
-// TODO: Improve me
 size_t ringbuffer_used(ringbuffer_t *rb) {
   if (!rb) return 0;
   size_t ret;
 
   lock(rb);
-  if (_isfull(rb))
-    ret = rb->size;
-  else if (rb->last == 0)
-    ret = (rb->size - rb->first) % rb->size;
+  if (_isfull(rb)) ret = rb->size;
   else ret = virt_idx(rb, rb->last);
   unlock(rb);
 
@@ -171,7 +166,7 @@ void ringbuffer_flush(ringbuffer_t *rb) {
 
 
 // Print the internal elements (without the raw buffer) of a ringbuffer
-#if defined(TEST) || !defined(AVR)
+#if defined(TEST)
 void ringbuffer_print(ringbuffer_t *rb) {
   if (!rb) return;
 

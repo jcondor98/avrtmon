@@ -33,6 +33,7 @@ int main(int argc, const char *argv[]) {
   shell_t *shell = shell_new("avrtmon> ", shell_commands,
       shell_commands_count, shell_storage);
   err_check_exit(!shell, "Could not initialize program shell");
+  debug shell_print(shell);
 
   // Main shell loop
   shell_launch(shell);

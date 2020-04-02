@@ -103,6 +103,9 @@ int serial_close(serial_context_t *ctx) {
   if (close(ctx->dev_fd) != 0)
     err_log("Unable to close device descriptor");
 
+  // Destroy the RX ringbuffer
+  ringbuffer_delete(ctx->rx.buffer);
+
   free(ctx);
   return 0;
 }

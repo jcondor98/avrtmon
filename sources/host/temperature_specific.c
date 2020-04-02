@@ -135,6 +135,10 @@ int temperature_db_export(const temperature_db_t *db, const char *fpath) {
 }
 
 
+// Convert a raw temperature coming from the avrtmon to a float
+float temperature_raw2float(uint16_t raw) { return ((float) raw) / 10; }
+
+
 // Print a database
 void temperature_db_print(const temperature_db_t *db) {
   if (!db)
@@ -144,11 +148,3 @@ void temperature_db_print(const temperature_db_t *db) {
         db->id, db->desc ? db->desc : "[No description]", db->size, db->used,
         db->reg_resolution * db->reg_interval);
 }
-
-
-// Convert a raw temperature (i.e. uint16_t) coming from the avrtmon to a float
-// TODO: Do a proper conversion
-float temperature_raw2float(uint16_t raw) {
-  return (float) raw;
-}
-

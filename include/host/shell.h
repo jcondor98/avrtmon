@@ -41,19 +41,27 @@ void shell_launch(shell_t *shell);
 
 // Exit with an error from a shell command, printing a message
 // NOTE: Use only within a shell command!
-#define sh_error(err_msg, err_ret) do {\
-    fprintf(stderr, "%s: %s\n", argv[0], err_msg);\
+#define sh_error(err_ret, err_fmt, ...) do {\
+    fprintf(stderr, "%s: ", argv[0]);\
+    fprintf(stderr, err_fmt __VA_OPT__(,) __VA_ARGS__);\
+    fputc('\n', stderr);\
     return err_ret;\
-  }\
 } while (0)
 
 // Same as above, but print the error message and exit only if 'expr' is true
-#define sh_error_on(expr, err_msg, err_ret) do {\
+#define sh_error_on(expr, err_ret, err_fmt, ...) do {\
   if (expr) {\
-    fprintf(stderr, "%s: %s\n", argv[0], err_msg);\
+    fprintf(stderr, "%s: ", argv[0]);\
+    fprintf(stderr, err_fmt __VA_OPT__(,) __VA_ARGS__);\
+    fputc('\n', stderr);\
     return err_ret;\
   }\
 } while (0)
 
+
+// [DEBUG] Print informations about a given shell
+#ifdef DEBUG
+void shell_print(const shell_t *shell);
+#endif
 
 #endif    // __SHELL_MODULE_H

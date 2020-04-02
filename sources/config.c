@@ -7,7 +7,6 @@
 #include "config.h"
 
 #ifdef AVR
-//#include "lmsensor.h"
 #include "nvm.h"
 #endif
 

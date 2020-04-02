@@ -50,7 +50,7 @@ temperature_id_t temperature_count_all(void);
 // Returns the number of temperatures actually present in a database
 temperature_id_t temperature_count(uint8_t db_id);
 
-// Reset the database list, deleting all the temperatures
+// Reset the database list, deleting all temperatures
 void temperature_db_reset(void);
 
 // Craft a 'temperature_db_info_t' struct from an existent database

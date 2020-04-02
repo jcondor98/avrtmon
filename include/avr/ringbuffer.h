@@ -25,7 +25,6 @@ uint8_t ringbuffer_size(ringbuffer_t*);
 uint8_t ringbuffer_used(ringbuffer_t*);
 
 // Returns 1 if the buffer is empty, 0 if not or if it does not exist
-// TODO: On inexistent buffer should return 1
 uint8_t ringbuffer_isempty(ringbuffer_t*);
 
 // Returns 1 if the buffer is full, 0 if not or if it does not exist

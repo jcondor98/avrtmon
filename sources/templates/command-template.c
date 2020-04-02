@@ -8,14 +8,17 @@
 #define COMMAND_NAME cmd_foo
 
 
+/* Decomment this if you need to define a start action for the command, else
+ * you can delete this snippet
 // Command starter
 void _start(const void *arg) {
   // Put the start code here
 }
+*/
 
 
-/* Decomment this if you need to define an opmode for the command, else you can
- * delete this snippet
+/* Decomment this if you need to define an action to be done at each
+ * successfully sent packet for the command, else you can delete this snippet
 // Single command iteration
 static uint8_t _iterate(const void *arg) {
   // Put the iteration code here

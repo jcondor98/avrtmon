@@ -18,14 +18,9 @@ static inline uint8_t virt_idx(const ringbuffer_t *rb, uint8_t real) {
   return (real + rb->size - rb->first) % rb->size;
 }
 
-// [AUX] Shift forward first index
-static inline void ringbuffer_shift_first(ringbuffer_t *rb) {
-  rb->first = (rb->first + 1) % rb->size;
-}
-
-// [AUX] Shift forward last index
-static inline void ringbuffer_shift_last(ringbuffer_t *rb) {
-  rb->last = (rb->last + 1) % rb->size;
+// [AUX] Get the shifted (i.e. incremented) index for a virtual one
+static inline uint8_t shifted_idx(const ringbuffer_t *rb, uint8_t idx) {
+  return (idx + 1) % rb->size;
 }
 
 
@@ -41,11 +36,9 @@ uint8_t ringbuffer_new(ringbuffer_t *rb, uint8_t *buf, uint8_t buf_size) {
 uint8_t ringbuffer_size(ringbuffer_t *rb) { return rb ? rb->size : 0; }
 
 // Get the number of present items
-// TODO: Improve me
 uint8_t ringbuffer_used(ringbuffer_t *rb) {
   if (!rb) return 0;
   if (rb->full) return rb->size;
-  if (rb->last == 0) return (rb->size - rb->first) % rb->size;
   return virt_idx(rb, rb->last);
 }
 
@@ -65,7 +58,7 @@ uint8_t ringbuffer_pop(ringbuffer_t *rb, uint8_t *dest) {
   if (!rb || ringbuffer_isempty(rb))
     return 1;
   *dest = rb->base[rb->first];
-  ringbuffer_shift_first(rb);
+  rb->first = shifted_idx(rb, rb->first);
   rb->full = RINGBUFFER_NOT_FULL; // Less expensive than check-and-set
   return 0;
 }
@@ -75,7 +68,7 @@ uint8_t ringbuffer_push(ringbuffer_t *rb, uint8_t val) {
   if (!rb || rb->full)
     return 1;
   rb->base[rb->last] = val;
-  ringbuffer_shift_last(rb);
+  rb->last = shifted_idx(rb, rb->last);
   if (rb->first == rb->last)
     rb->full = RINGBUFFER_FULL;
   return 0;
@@ -91,7 +84,7 @@ void ringbuffer_flush(ringbuffer_t *rb) {
 
 
 // Print the internal elements (without the raw buffer) of a ringbuffer
-#if defined(TEST) || !defined(AVR)
+#if defined(TEST)
 void ringbuffer_print(ringbuffer_t *rb) {
   if (!rb) return;
   printf("Printing ringbuffer\n"

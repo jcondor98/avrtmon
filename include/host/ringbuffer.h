@@ -20,6 +20,9 @@ typedef struct _ringbuffer_s {
 // Initialize a ring buffer
 ringbuffer_t *ringbuffer_new(size_t buf_size);
 
+// Delete a ringbuffer
+void ringbuffer_delete(ringbuffer_t *rb);
+
 // Return the maximum number of items
 size_t ringbuffer_size(ringbuffer_t*);
 
@@ -44,8 +47,7 @@ unsigned char ringbuffer_push(ringbuffer_t*, unsigned char val);
 void ringbuffer_flush(ringbuffer_t*);
 
 // Print the internal elements (without the raw buffer) of a ringbuffer
-// TODO: Remove guard
-#if defined(TEST) || !defined(AVR)
+#if defined(TEST)
 void ringbuffer_print(ringbuffer_t*);
 #endif
 

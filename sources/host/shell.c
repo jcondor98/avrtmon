@@ -23,9 +23,6 @@ static int cmdcmp(const void *c1, const void *c2);
 // [AUX] Retrieve a shell command given its name
 static shell_command_t *shell_command_get(const shell_t *shell, const char *name);
 
-// [DEBUG] Print informations about a given shell
-void shell_print(const shell_t *shell);
-
 
 // Create a new shell object, given a prompt and and a command array
 // Returns a pointer to the new shell object on success, NULL otherwise
@@ -37,8 +34,7 @@ shell_t *shell_new(const char *prompt, const shell_command_t *commands,
 
   // Create a new shell memory object
   shell_t *shell = malloc(sizeof(shell_t));
-  if (!shell)
-    goto handle_allocator_error;
+  if (!shell) goto handle_allocator_error;
 
   // Setup a sorted-by-name commands array
   shell->commands = malloc(commands_count * sizeof(shell_command_t));
@@ -55,7 +51,6 @@ shell_t *shell_new(const char *prompt, const shell_command_t *commands,
   shell->commands_count = commands_count;
   shell->storage = storage;
 
-  debug shell_print(shell);
   return shell;
 
 
@@ -169,6 +164,7 @@ void shell_launch(shell_t *shell) {
 
 // [AUX] Comparator for commands name to sort the commands array of the shell
 static int cmdcmp(const void *c1, const void *c2) {
+  if (!c1 && !c2) return 0;
   if (!c1) return -1;
   if (!c2) return  1;
   const shell_command_t *_c1 = c1, *_c2 = c2;

@@ -29,6 +29,7 @@
 typedef struct _shell_storage_s {
   serial_context_t *serial_ctx;
   list_t *dbs;
+  unsigned db_incr_counter; // Incremental counter for DB IDs
 } shell_storage_t;
 
 // Wrapper to destroy DBs when destroying 'dbs'
@@ -50,6 +51,7 @@ void *shell_storage_new(void) {
   }
 
   SERIAL_CTX = NULL;  // i.e. not connected
+  st->db_incr_counter = 0;
   return (void*) st;
 }
 
@@ -94,12 +96,12 @@ int connect(int argc, char *argv[], void *storage) {
     fputs("Open serial context found; reconnecting\n", stderr);
   else { // Open a descriptor for the tmon
     SERIAL_CTX = serial_open(argv[1]);
-    sh_error_on(!SERIAL_CTX, "Unable to connect to the tmon", 2);
+    sh_error_on(!SERIAL_CTX, 2, "Unable to connect to the tmon");
   }
 
   // Estabilish the connection
-  sh_error_on(communication_connect(SERIAL_CTX) != 0,
-      "Could not send a handshake packet", 3);
+  sh_error_on(communication_connect(SERIAL_CTX) != 0, 3,
+      "Could not send a handshake packet");
 
   return 0;
 }
@@ -111,11 +113,11 @@ int connect(int argc, char *argv[], void *storage) {
 int disconnect(int argc, char *argv[], void *storage) {
   _storage_cast(st, storage);
   if (argc != 1) return 1;
-  sh_error_on(!SERIAL_CTX, "tmon is not connected", 2);
+  sh_error_on(!SERIAL_CTX, 2, "tmon is not connected");
 
   int ret = serial_close(SERIAL_CTX);
   SERIAL_CTX = NULL; // i.e. set to disconnected
-  sh_error_on(ret != 0, "Could not close the tmon file descriptor", 3);
+  sh_error_on(ret != 0, 3, "Could not close the tmon file descriptor");
 
   return 0;
 }
@@ -135,14 +137,13 @@ int disconnect(int argc, char *argv[], void *storage) {
 int download(int argc, char *argv[], void *storage) {
   _storage_cast(st, storage);
   if (argc > 1) return 1;
-  sh_error_on(!SERIAL_CTX, "tmon is not connected", 2);
+  sh_error_on(!SERIAL_CTX, 2, "tmon is not connected");
 
   // Store DBs in a list
   list_t *db_list = list_new();
-  sh_error_on(!db_list, "Could not create new linked list", 2);
+  sh_error_on(!db_list, 2, "Could not create new linked list");
 
   // DB which is currently in reception, with variables to store metadata
-  // TODO: Initialize 'db_id' to avoid conflicts
   uint8_t db_id;
   uint16_t db_reg_resolution, db_reg_interval;
   temperature_id_t db_size;
@@ -153,8 +154,8 @@ int download(int argc, char *argv[], void *storage) {
 
 
   // Send a download command to the tmon
-  sh_error_on(pcmd(CMD_TEMPERATURES_DOWNLOAD, NULL, 0) != 0,
-      "Could not send CMD packet", 3);
+  sh_error_on(pcmd(CMD_TEMPERATURES_DOWNLOAD, NULL, 0) != 0, 3,
+      "Could not send CMD packet");
 
   // TODO: First packet must be a CTR one
 
@@ -168,13 +169,17 @@ int download(int argc, char *argv[], void *storage) {
       if (data_size == 0) { // No more data to receive
         if (list_size(db_list) == 0) // No temperatures were received
           list_delete(db_list, NULL);
-        else list_concat(st->dbs, db_list);
+        else {
+          list_concat(st->dbs, db_list);
+          st->db_incr_counter = db_id + 1; // i.e. += Last ID received
+        }
         return 0;
       }
 
       else if (data_size == sizeof(temperature_db_info_t)) { // New DB incoming
         temperature_db_info_extract(pack_rx->data, &db_id, &db_size,
             &db_reg_resolution, &db_reg_interval);
+        db_id += st->db_incr_counter;
         db_current = temperature_db_new(db_id, db_size,
             db_reg_resolution, db_reg_interval, NULL);
         assert(db_current);
@@ -201,7 +206,7 @@ int download(int argc, char *argv[], void *storage) {
 
   // Error handler
   list_delete(db_list, _temperature_db_item_destroyer);
-  sh_error_on(1, "Communication failure", 3); // Communication error
+  sh_error(3, "Communication failure"); // Communication error
 }
 
 
@@ -212,9 +217,9 @@ int tmon_reset(int argc, char *argv[], void *storage) {
   _storage_cast(st, storage);
   if (argc != 1) return 1;
 
-  sh_error_on(!SERIAL_CTX, "tmon is not connected", 2);
-  sh_error_on(pcmd(CMD_TEMPERATURES_RESET, NULL, 0) != 0,
-      "Could not send CMD packet", 2);
+  sh_error_on(!SERIAL_CTX, 2, "tmon is not connected");
+  sh_error_on(pcmd(CMD_TEMPERATURES_RESET, NULL, 0) != 0, 2,
+      "Could not send CMD packet");
 
   return 0;
 }
@@ -242,15 +247,15 @@ int tmon_config(int argc, char *argv[], void *storage) {
   else if (strcmp(argv[1], "get") == 0) {
     if (argc != 3) return 1;
     config_field_t f;
-    sh_error_on(config_field_id(argv[2], &f) != 0, "Invalid config field", 2);
+    sh_error_on(config_field_id(argv[2], &f) != 0, 2, "Invalid config field");
 
     // Send a CONFIG_GET_FIELD command to the tmon
-    sh_error_on(pcmd(CMD_CONFIG_GET_FIELD, &f, sizeof(config_field_t)),
-        "Could not send CMD packet", 3);
+    sh_error_on(pcmd(CMD_CONFIG_GET_FIELD, &f, sizeof(config_field_t)), 3,
+        "Could not send CMD packet");
 
     // Retrieve the field from the tmon
     packet_t pack_rx[1];
-    sh_error_on(precv(pack_rx), "Could not receive config field value", 3);
+    sh_error_on(precv(pack_rx), 3, "Could not receive config field value");
 
     // Handle the received config field value
     // We assume that every config field is an integer
@@ -281,7 +286,7 @@ int tmon_config(int argc, char *argv[], void *storage) {
 
     // Parse the config field to set
     config_field_t f;
-    sh_error_on(config_field_id(argv[2], &f) != 0, "Invalid config field", 2);
+    sh_error_on(config_field_id(argv[2], &f) != 0, 2, "Invalid config field");
 
     // Parse the value for the configuration field
     int value = atoi(argv[3]);
@@ -308,8 +313,8 @@ int tmon_config(int argc, char *argv[], void *storage) {
     }
 
     // Send the proper CMD packet
-    sh_error_on(pcmd(CMD_CONFIG_SET_FIELD, f_setter, sizeof(_f_setter)),
-        "Could not send CMD packet with config setter", 2);
+    sh_error_on(pcmd(CMD_CONFIG_SET_FIELD, f_setter, sizeof(_f_setter)), 2,
+        "Could not send CMD packet with config setter");
   }
 
   else return 1;  // Unknown command, error
@@ -329,12 +334,10 @@ int tmon_echo(int argc, char *argv[], void *storage) {
   size_t str_len = 0;
   for (int i=1; i < argc; ++i) {
     size_t tok_len = strlen(argv[i]);
-    // TODO: Compact with 'sh_error_on'
-    if ((str_len ? str_len + 1 : 0) + tok_len >= PACKET_DATA_MAX_SIZE - 2) {
-      fprintf(stderr, "Error: arguments must be at most %d characters long "
-          "in total\n", PACKET_DATA_MAX_SIZE - 2);
-      return 2;
-    }
+    sh_error_on(
+        (str_len ? str_len+1 : 0) + tok_len >= PACKET_DATA_MAX_SIZE - 2, 2,
+        "Error: arguments must be at most %d characters long " "in total\n",
+        PACKET_DATA_MAX_SIZE - 2);
     if (str_len) str[str_len++] = ' ';
     strcpy(str + str_len, argv[i]);
     str_len += tok_len;
@@ -342,22 +345,21 @@ int tmon_echo(int argc, char *argv[], void *storage) {
   str[str_len] = '\0';
 
   // Send the string to the tmon with a CMD_ECHO command
-  sh_error_on(pcmd(CMD_ECHO, str, str_len + 1) != 0,
-      "Could not send the string to echo to the tmon", 3);
+  sh_error_on(pcmd(CMD_ECHO, str, str_len + 1) != 0, 3,
+      "Could not send the string to echo to the tmon");
 
   // Get the string back from the tmon
   packet_t pack_rx;
-  sh_error_on(precv(&pack_rx),
-      "Could not receive the echo string back from the tmon", 3);
+  sh_error_on(precv(&pack_rx), 3,
+      "Could not receive the echo string back from the tmon");
 
+  // Check the packet data size and prepare the received string to be printed
   const unsigned char pack_rx_size_expected = PACKET_HEADER_SIZE +
     str_len + sizeof(crc_t);
   const unsigned char pack_rx_size = packet_get_size(&pack_rx);
-  if (pack_rx_size != pack_rx_size_expected) { // TODO: Compact
-    fprintf(stderr, "Error: The received packet is %hhu bytes long, expected %hhu\n",
-        pack_rx_size, pack_rx_size_expected);
-    return 2;
-  }
+  sh_error_on(pack_rx_size != pack_rx_size_expected, 2,
+      "Error: The received packet is %hhu bytes long, expected %hhu\n",
+      pack_rx_size, pack_rx_size_expected);
   pack_rx.data[str_len] = '\0'; // Substitute first CRC byte with string terminator
 
   // Print the received string and return
@@ -380,10 +382,8 @@ int list(int argc, char *argv[], void *storage) {
   // TODO: Improve performances using an iterator
   for (size_t i=0; i < db_count; ++i) {
     temperature_db_t *db;
-    if (list_get(st->dbs, i, (void**) &db) != 0) {
-      printf("Error while fetching database of index %zu\n\n", i);
-      return 2;
-    }
+    sh_error_on(list_get(st->dbs, i, (void**) &db) != 0, 2,
+        "Error while fetching database of index %zu\n\n", i);
     if (!db) fprintf(stderr, "Error: Database %zu is NULL\n", i);
     else {
       printf("Database ID: %u\n", db->id);
@@ -399,21 +399,23 @@ int list(int argc, char *argv[], void *storage) {
 // CMD: export
 // Usage: export <db_id> <output_filepath>
 // Export a database (as text, newline-separated float temperatures)
+// TODO: Make this reentrant (static variable emulates a closure)
+static unsigned _db_id_to_find;
+static int _db_has_id(void *_db) {
+  temperature_db_t *db = _db;
+  return (db && db->id == _db_id_to_find);
+}
+
 int export(int argc, char *argv[], void *storage) {
   _storage_cast(st, storage);
   if (argc != 3) return 1;
-  temperature_db_t *db;
 
-  size_t db_id = atoi(argv[1]);
-  if (list_get(st->dbs, db_id, (void**) &db) != 0) {
-    fprintf(stderr, "Error: could not fetch database of index %zu\n", db_id);
-    return 2;
-  }
+  _db_id_to_find = atoi(argv[1]);
+  temperature_db_t *db = list_find(st->dbs, _db_has_id);
 
-  if (temperature_db_export(db, argv[2])) {
-    fputs("Error while exporting database\n", stderr);
-    return 2;
-  }
+  sh_error_on(!db, 2, "Error: could not fetch database");
+  sh_error_on(temperature_db_export(db, argv[2]) != 0, 3,
+      "Error while exporting database of ID %u", _db_id_to_find);
 
   return 0;
 }

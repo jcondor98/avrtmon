@@ -15,8 +15,9 @@
 #include "debug.h"
 
 
-// Declare a shell_storage_t variable casted from an opaque pointer
+// Declare a shell_storage_t/shell_t variable casted from an opaque pointer
 #define _storage_cast(st,opaque) shell_storage_t *st=(shell_storage_t*)(opaque)
+#define _shell_cast(sh,opaque) shell_t *sh=(shell_t*)(opaque)
 
 // Handier function to send and receive packets
 #define SERIAL_CTX (st->serial_ctx) // Must be the context in EVERY function below
@@ -422,8 +423,59 @@ int export(int argc, char *argv[], void *storage) {
 
 
 
-// Set of all the shell commands
-static shell_command_t _shell_commands[] = {
+// Here starts "built-in" commands
+// TODO: Move to the shell module itself when a better way to handle commands
+// is implemented
+
+// CMD: help
+// Usage: help [command]
+// Display the entire command set, or a description of a specific command
+int help(int argc, char *argv[], void *env) {
+  _shell_cast(sh, env);
+
+  // Generic use of 'help'
+  if (argc == 1) {
+    printf("\nBuilt-in commands: %zu\n", sh->builtins_count);
+    for (size_t i=0; i < sh->builtins_count; ++i)
+      printf(" - %s\n", sh->builtins[i].name);
+    printf("\nExternal commands: %zu\n", sh->commands_count);
+    for (size_t i=0; i < sh->commands_count; ++i)
+      printf(" - %s\n", sh->commands[i].name);
+    putchar('\n');
+  }
+
+  // 'help' takes a command name as its sole argument
+  else if (argc == 2) {
+    // TODO: Handle NULL function
+    shell_command_t *cmd = sh->command_ops.get(sh, argv[1], CMD_TYPE_ALL);
+    if (cmd) {
+      if (cmd->help) puts(cmd->help);
+      else printf("No help for command %s\n", cmd->name);
+    }
+    else {
+      printf("Unknown command: %s\n", argv[1]);
+      return 2;
+    }
+  }
+
+  else return 1; // Unaccepted syntax
+  return 0; // Success
+}
+
+
+// CMD: exit
+// Exit from the shell
+int _sh_exit(int argc, char *argv[], void *env) {
+  _shell_cast(sh, env);
+  if (argc != 1) return 1;
+  shell_flag_set(sh, SH_SIG_EXIT);
+  return 0;
+}
+
+
+
+// Set of the builtin shell commands
+static shell_command_t _shell_builtins[] = {
   (shell_command_t) { // CMD: echo
     .name = "echo",
     .help = "Usage: echo [arg1 arg2 ...]\n"
@@ -431,6 +483,27 @@ static shell_command_t _shell_commands[] = {
     .exec = echo
   },
 
+  (shell_command_t) { // CMD: help
+    .name = "help",
+    .help = "Usage: help [command]\n"
+      "Display the entire command set, or a description of a specific command",
+    .exec = help
+  },
+
+  (shell_command_t) { // CMD: exit
+    .name = "exit",
+    .help = "Exit from the shell",
+    .exec = _sh_exit
+  }
+};
+
+// This is the exposed shell commands set
+shell_command_t *shell_builtins = _shell_builtins;
+size_t shell_builtins_count = sizeof(_shell_builtins) / sizeof(shell_command_t);
+
+
+// Set of all the shell commands
+static shell_command_t _shell_commands[] = {
   (shell_command_t) { // CMD: connect
     .name = "connect",
     .help = "Usage: connect <device_path>\n"

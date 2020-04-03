@@ -4,10 +4,18 @@
 #ifndef __SHELL_MODULE_H
 #define __SHELL_MODULE_H
 
+// Different types of commands, in order of descending priority
+// NOTE: CMD_TYPE_NONE must be the last value!
+typedef enum COMMAND_TYPE_T {
+  CMD_TYPE_ALL = 0, CMD_TYPE_BUILTIN, CMD_TYPE_EXTERNAL,CMD_TYPE_NONE
+} command_type_t;
+
 // Type definition for a shell command executor
 // A shell command can have a return value (0 on success), and argv[0] is the
 // name of the command itself, like command-line programs in the POSIX standard
-typedef int (*shell_command_f)(int argc, char *argv[], void *storage);
+// 'env' can be the shell storage in case of external commands and the entire
+// shell context for built-ins, but the choice is up to the programmer
+typedef int (*shell_command_f)(int argc, char *argv[], void *env);
 
 // Type definition for a shell command
 typedef struct _shell_command_s {
@@ -16,12 +24,26 @@ typedef struct _shell_command_s {
   shell_command_f exec;
 } shell_command_t;
 
+// Shell flags
+typedef enum SHELL_FLAG_E {
+  SH_SIG_EXIT = 1 << 0,
+  SH_SCRIPT_MODE = 1 << 1
+} shell_flag_t;
+
 // Type definition for a shell
 typedef struct _shell_s {
   char *prompt;
   shell_command_t *commands;
+  shell_command_t *builtins;
   size_t commands_count;
+  size_t builtins_count;
   void *storage;
+  struct { // TODO: Complete to make this a full interface
+    int (*compare)(const void *cmd1, const void *cmd2);
+    shell_command_t* (*get)(const struct _shell_s *shell,
+        const char *name, unsigned char type);
+  } command_ops;
+  unsigned char flags;
 } shell_t;
 
 
@@ -30,13 +52,26 @@ typedef struct _shell_s {
 // The function will recreate a new commands array, so the one passed can be
 // deallocated without any wanted effect. Same thing will be done for 'prompt'
 shell_t *shell_new(const char *prompt, const shell_command_t *commands,
-    size_t commands_count, void *storage);
+    size_t commands_count, const shell_command_t *builtins,
+    size_t builtins_count, void *storage);
 
 // Delete a shell (along with all the memory objects it uses)
 void shell_delete(shell_t *shell);
 
 // Launch a shell - Blocks until the user exits
-void shell_launch(shell_t *shell);
+void shell_loop(shell_t *shell);
+
+// Process and execute a line
+int shell_exec(shell_t *shell, const char *line);
+
+// Execute a shell command, argv-style
+int shell_execv(shell_t *shell, char *argv[]);
+
+// Operations on shell flags
+#define shell_flag_get(sh,flag) (((sh)->flags & (flag)) ? 1 : 0)
+#define shell_flag_set(sh,flag) ((sh)->flags |= (flag))
+#define shell_flag_clr(sh,flag) ((sh)->flags &= ~(flag))
+#define shell_flag_tog(sh,flag) ((sh)->flags ^= (flag))
 
 
 // Exit with an error from a shell command, printing a message

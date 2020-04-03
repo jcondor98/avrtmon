@@ -33,7 +33,7 @@ int main(int argc, const char *argv[]) {
   PORTB = 0; // Turn off LED
   while (1) {
     // Get a temperature
-    lm_start_conv();
+    lm_convert();
     while (! lm_available())
       ;
     temperature = lm_getresult();

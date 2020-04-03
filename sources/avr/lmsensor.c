@@ -2,24 +2,23 @@
 // LM Sensor layer - Source file
 // Paolo Lucchesi - Sun 18 Aug 2019 05:31:33 PM CEST
 #include <avr/io.h>
+#include <avr/sleep.h>
 #include <avr/interrupt.h>
 #include "lmsensor.h"
 
+#define POWER_ACT_LED D24
 
 volatile uint16_t adc_result;
 volatile uint8_t  adc_available;
 volatile uint8_t  adc_ongoing;
 
 
-// Toggle ADC conversion complete interrupt enabled flag
-static inline void adc_sei(void) { ADCSRA |=  (1 << ADIE); }
-static inline void adc_cli(void) { ADCSRA &= ~(1 << ADIE); }
-
 // ADC conversion complete ISR
 ISR(ADC_vect) {
   adc_available = 1;
   adc_ongoing = 0;
   adc_result = ADC;
+  lm_cli(); // Do not raise interrupts further
 }
 
 
@@ -34,24 +33,29 @@ void lm_init(uint8_t adc_pin) {
   // ADPS* -> Set prescaler to 128 (i.e. ADC Frequency = F_CPU / Psc. = 125kHz)
   ADCSRA = (1 << ADEN) | (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
 
-  // Disable digital I/O for analog pins
-  DIDR0 = 0;
-  DIDR2 = 0;
-
   // Perform and discard first conversion
   ADCSRA |= (1 << ADSC);
   while(ADCSRA & (1 << ADSC)) ;
-
-  adc_sei();
 }
 
 
 // Start a conversion (and return 0)
 // If the ADC is busy, do not start the conversion and return 1
-uint8_t lm_start_conv(void) {
-  if (adc_ongoing) return 1;
+uint8_t lm_convert(void) {
+  // Setup before the conversion (do not go to sleep if global interrupts are
+  // disabled, you would sleep - almost - forever)
+  if (adc_ongoing || !(SREG & (1 << 7))) return 1;
   adc_ongoing = 1;
-  ADCSRA |= (1 << ADSC);
+  lm_sei();
+
+  // Enter in ADC Noise Reduction sleep mode
+  // Assume that global interrupts are enabled (libraries should never 'sei()')
+  SMCR &= ~(1 << SM2 | 1 << SM1);
+  SMCR |= 1 << SM0;
+  sleep_enable();
+  sleep_cpu();
+  sleep_disable();
+
   return 0;
 }
 

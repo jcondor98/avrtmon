@@ -39,13 +39,17 @@ void button_init(void) {
 
 
 // The buttons handler itself
-void button_handler(void) {
+// Returns 0 if no significant action was performed, non-zero otherwise
+uint8_t button_handler(void) {
+  uint8_t ret = 0;
   for (uint8_t btn=0; btn < BUTTON_COUNT; ++btn) {
     if (!buttons[btn].enabled || !buttons[btn].action || !buttons[btn].pressed)
       continue;
     buttons[btn].action(buttons[btn].pressed);
     buttons[btn].pressed = 0;
+    ret = 1;
   }
+  return ret;
 }
 
 

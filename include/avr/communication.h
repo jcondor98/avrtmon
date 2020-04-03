@@ -44,7 +44,8 @@ uint8_t communication_craft_and_send(packet_type_t type, const uint8_t *data,
     uint8_t data_size);
 
 // Perform a single "iteration" of the communication module activity
-void communication_handler(void);
+// Returns 0 if no significant action was performed, non-zero otherwise
+uint8_t communication_handler(void);
 
 // Switch communication opmode
 void communication_opmode_switch(const com_opmode_t opmode_new);

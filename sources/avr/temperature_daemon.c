@@ -21,6 +21,7 @@ static inline void td_cli(void) { TIMSK1 &= ~(1 << OCIE1A); }
 // Timer variables
 static volatile uint16_t timer_counter;
 static volatile uint8_t timer_ongoing;
+static volatile uint8_t timer_elapsed;
 static uint16_t timer_resolution;
 static uint16_t timer_interval;
 
@@ -29,7 +30,8 @@ static uint16_t timer_interval;
 ISR(TIMER1_COMPA_vect) {
   if (++timer_counter != timer_interval) return;
   timer_counter = 0;
-  lm_start_conv();
+  timer_elapsed = 1;
+  //lm_start_conv();
 }
 
 
@@ -70,6 +72,7 @@ void temperature_daemon_start(uint8_t pressed) {
 void temperature_daemon_stop(uint8_t pressed) {
   td_cli();
   timer_ongoing = 0;
+  lm_getresult(); // Discard last result if present
   led_off(TEMPERATURE_REGISTERING_LED);
 }
 
@@ -84,11 +87,15 @@ uint16_t temperature_daemon_get_interval(void)   { return timer_interval; }
 
 // Handle daemon "notifications", must be run periodically
 // In practice, register new temperatures if there is any
-void temperature_daemon_handler(void) {
-  // If no new temperatures are available, return immediately
-  if (!lm_available()) return;
+uint8_t temperature_daemon_handler(void) {
+  //if (!lm_ongoing()) return 0;
+  if (!timer_elapsed) return 0;
+  timer_elapsed = 0;
 
-  // Stop the timer if there is no space left in the NVM
+  lm_convert();
+  while (lm_ongoing()) ; // Waits only if conversion was interrupted
+
   if (temperature_register(lm_getresult()) != 0)
     temperature_daemon_stop(1);
+  return 0; // Always returns 0
 }

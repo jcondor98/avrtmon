@@ -74,7 +74,7 @@ int main(int argc, const char *argv[]) {
   // Automatically connect if '-c' was specified
   if (avr_dev_path) {
     char *avr_connect_args[] = { "connect", avr_dev_path, NULL };
-    if (shell_execv(shell, avr_connect_args) != 1)
+    if (shell_execv(shell, avr_connect_args) != 0)
       exit(EXIT_FAILURE);
   }
 

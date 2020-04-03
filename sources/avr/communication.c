@@ -188,24 +188,28 @@ uint8_t communication_craft_and_send(packet_type_t type, const uint8_t *data,
 
 
 // Transfer control flow to the communication layer
-void communication_handler(void) {
+// Returns 0 if no significant action was performed, non-zero otherwise
+uint8_t communication_handler(void) {
+  uint8_t ret = 0;
   if (command_notified) {
     command_notified = 0;
     if (command_iterate(command_current, NULL) != CMD_RET_ONGOING)
       command_end();
+    ret = 1;
   }
 
-  if (!serial_rx_available()) return;
+  if (!serial_rx_available()) return ret;
 
   // If data is available, attempt to receive a new packet
   static packet_t p[1];
-  if (communication_recv(p) != 0) return;
+  if (communication_recv(p) != 0) return 1;
 
   // The incoming packet have been received correctly
   const uint8_t type = packet_get_type(p);
   com_operation_f action = opmode[type] ? opmode[type] : opmode_default[type];
   if (action && action(p) != CMD_RET_ONGOING)
     communication_opmode_restore();
+  return 1;
 }
 
 

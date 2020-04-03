@@ -14,9 +14,13 @@ typedef enum ADC_PIN_E {
 // Initialize ADC and other required stuff
 void lm_init(uint8_t adc_pin);
 
+// Set/Clear ADC interrupt flag
+#define lm_sei() do { ADCSRA |=  (1 << ADIE); } while (0)
+#define lm_cli() do { ADCSRA &= ~(1 << ADIE); } while (0)
+
 // Start a conversion (and return 0)
 // If the ADC is busy, do not start the conversion and return 1
-uint8_t lm_start_conv(void);
+uint8_t lm_convert(void);
 
 // Return 1 if there is an ongoing conversion, 0 otherwise
 uint8_t lm_ongoing(void);

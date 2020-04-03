@@ -27,8 +27,9 @@ typedef struct _button_s {
 void button_init(void);
 
 // The buttons handler itself
-// If one or more buttons have been pressed, the linked callbacks will be executed
-void button_handler(void);
+// If some buttons have been pressed, the linked callbacks will be executed
+// Returns 0 if no significant action was performed, non-zero otherwise
+uint8_t button_handler(void);
 
 // Set a callback for a button (NULL is non-sensical but accepted)
 // Returns 0 on success, 1 if the button does not exist

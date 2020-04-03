@@ -21,6 +21,7 @@ uint16_t temperature_daemon_get_resolution(void);
 uint16_t temperature_daemon_get_interval(void);
 
 // Handle daemon "notifications", must be run periodically
-void temperature_daemon_handler(void);
+// Always returns 0
+uint8_t temperature_daemon_handler(void);
 
 #endif    // __TEMPERATURE_DAEMON_H

@@ -7,13 +7,14 @@
 
 
 // Number of field present in the configuration
-#define CONFIG_FIELD_COUNT 5
+#define CONFIG_FIELD_COUNT 6
 
 // Identifiers for each configuration field
 typedef enum CONFIG_FIELD_E {
   CFG_TEMPERATURE_TIMER_RESOLUTION,
   CFG_TEMPERATURE_TIMER_INTERVAL,
   CFG_LMSENSOR_PIN,
+  CFG_BTN_DEBOUNCE_TIME,
   CFG_START_PIN,
   CFG_STOP_PIN
 } config_field_t;
@@ -23,6 +24,7 @@ typedef struct _config_s {
   uint16_t temperature_timer_resolution;
   uint16_t temperature_timer_interval;
   uint8_t lmsensor_pin;
+  uint8_t btn_debounce_time;
   uint8_t start_pin;
   uint8_t stop_pin;
 } config_t;

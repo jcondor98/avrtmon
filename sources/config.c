@@ -24,6 +24,7 @@ static const config_field_accessor_t cfg_accessors[CONFIG_FIELD_COUNT] = {
   { .size = sizeof(uint16_t), .offset = offsetof(config_t, temperature_timer_resolution) },
   { .size = sizeof(uint16_t), .offset = offsetof(config_t, temperature_timer_interval) },
   { .size = sizeof(uint8_t), .offset = offsetof(config_t, lmsensor_pin) },
+  { .size = sizeof(uint8_t), .offset = offsetof(config_t, btn_debounce_time) },
   { .size = sizeof(uint8_t), .offset = offsetof(config_t, start_pin) },
   { .size = sizeof(uint8_t), .offset = offsetof(config_t, stop_pin) }
 };
@@ -98,6 +99,7 @@ static const char *_config_field_str[] = {
   "temperature_timer_resolution",
   "temperature_timer_interval",
   "lmsensor_pin",
+  "btn_debounce_time",
   "start_pin",
   "stop_pin"
 };

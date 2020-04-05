@@ -42,10 +42,11 @@ static inline void temperature_setup(void) {
 
   temperature_init();
   temperature_daemon_init(resolution, interval, lm_pin);
+
   button_action_set(btn_start, temperature_daemon_start);
   button_action_set(btn_stop,  temperature_daemon_stop);
-  button_enable(btn_start);
-  button_enable(btn_stop);
+  button_enable(btn_start, BTN_VOLT_HIGH);
+  button_enable(btn_stop,  BTN_VOLT_HIGH);
 }
 
 
@@ -56,7 +57,6 @@ static inline void power_setup(void) {
   power_usart2_disable();
   power_timer0_disable();
   power_timer2_disable();
-  power_timer4_disable();
   power_timer5_disable();
   power_twi_disable();
   power_spi_disable();
@@ -70,8 +70,11 @@ static inline void power_setup(void) {
   DIDR1 = 0xFF;
   DIDR2 = 0xFF;
 
-  // Disable On-Chip Debug module (i.e. JTAG)
-  MCUCR |= 1 << JTD;
+  // Disable On-Chip Debug module (i.e. JTAG, must be done in 4 cycles to work)
+  uint8_t mcucr_old = MCUCR | (1 << JTD);
+  MCUCR = 1 << JTD;
+  MCUCR = 1 << JTD;
+  MCUCR = mcucr_old;
 }
 
 
@@ -79,7 +82,10 @@ int main(int argc, const char *argv[]) {
   // Initialize fundamental modules
   power_setup();
   config_fetch();
-  button_init();
+
+  uint8_t debounce_time;
+  config_get(CFG_BTN_DEBOUNCE_TIME, &debounce_time);
+  button_init(debounce_time);
 
   temperature_setup(); // Initialize all temperature modules
 
@@ -100,9 +106,8 @@ int main(int argc, const char *argv[]) {
     act_perf += button_handler();             // Check for user interaction
 
     // Enter (interruptable) sleep mode if no action request was performed
-    // Do not enter in sleep mode while the ADC interrupt is enabled
     cli();
-    if (!act_perf && !lm_ongoing()) {
+    if (!act_perf) {
       // Set idle sleep mode (in the docs set_sleep_mode() is... ambiguous)
       SMCR &= ~(1 << SM2 | 1 << SM1 | 1 << SM0);
       led_off(POWER_ACT_LED);

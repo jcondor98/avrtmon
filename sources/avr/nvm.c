@@ -14,6 +14,7 @@ nvm_image_t NVMMEM _nvm_image = {
     .temperature_timer_resolution = 1000,
     .temperature_timer_interval = 2,
     .lmsensor_pin = A0,
+    .btn_debounce_time = 60,
     .start_pin = D53,
     .stop_pin = D52
   },

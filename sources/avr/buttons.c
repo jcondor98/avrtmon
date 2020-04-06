@@ -11,8 +11,8 @@
 // Buttons used in the module
 static button_t buttons[BUTTON_COUNT] = { 0 };
 
-// Debounce time in milliseconds
-static uint8_t debounce_time;
+// Debounce variables (flag and time in milliseconds)
+static uint8_t debounce_time, debouncing;
 
 
 // Get external interrupt flags
@@ -49,7 +49,7 @@ static inline uint8_t _btn_update(button_t *btn, uint8_t input) {
 // Debouncer ISR -- Timer 4 is used
 // TODO: Non-blocking
 ISR(TIMER4_COMPA_vect) {
-  uint8_t debouncing = 0;
+  debouncing = 0;
 
   // Debounce [D53,D50] (i.e. PCINT0[0,3])
   if (!eint_flg()) {
@@ -103,8 +103,6 @@ void button_init(uint8_t debounce_tm) {
   debounce_time = debounce_tm ? debounce_tm : DEFAULT_DEBOUNCE_TIME;
   OCR4A = (uint16_t)(OCR_ONE_MSEC * debounce_time); // Set debounce time
 
-  // Enable external interrupts
-  eint_sei();
   PCMSK0 = 0;
 }
 
@@ -158,6 +156,7 @@ uint8_t button_enable(button_pin_t btn, button_voltage_t v_initial) {
       _btn_stat_reset(&buttons[btn], v_initial);
       buttons[btn].enabled = 1;
       PCMSK0 |=  mask;
+      if (!debouncing) eint_sei();
       break;
 
     case D21: // INT0
@@ -194,6 +193,9 @@ uint8_t button_disable(button_pin_t btn) {
       PCMSK0 &= ~mask;
       PORTB  &= ~mask;
       DDRB   |=  mask;
+      if (! (buttons[D53].enabled || buttons[D52].enabled ||
+             buttons[D51].enabled || buttons[D50].enabled))
+          eint_cli();
       break;
 
     case D21: // INT0

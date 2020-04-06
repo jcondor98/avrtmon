@@ -27,7 +27,8 @@ typedef struct _shell_command_s {
 // Shell flags
 typedef enum SHELL_FLAG_E {
   SH_SIG_EXIT = 1 << 0,
-  SH_SCRIPT_MODE = 1 << 1
+  SH_SCRIPT_MODE = 1 << 1,
+  SH_EXIT_ON_ERR = 1 << 2
 } shell_flag_t;
 
 // Type definition for a shell
@@ -59,7 +60,7 @@ shell_t *shell_new(const char *prompt, const shell_command_t *commands,
 void shell_delete(shell_t *shell);
 
 // Launch a shell - Blocks until the user exits
-void shell_loop(shell_t *shell);
+void shell_loop(shell_t *shell, FILE *input);
 
 // Process and execute a line
 int shell_exec(shell_t *shell, const char *line);

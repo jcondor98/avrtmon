@@ -122,13 +122,17 @@ int temperature_db_export(const temperature_db_t *db, const char *fpath) {
     return 1;
   }
 
-  // Write database metadata
-  fprintf(out, "%u\n", db->id);
-  fprintf(out, "%u\n", db->size);
+  // Print database title
+  if (!db->desc)
+    fprintf(out, "Database %u\n", db->id);
+  else fprintf(out, "%s\n", db->desc);
+
+  // Compute time interval between temperature samples, in seconds
+  const double interval = (db->reg_resolution * db->reg_interval) / 1000;
   
   // Write the temperatures
   for (unsigned i=0; i < db->size; ++i)
-    fprintf(out, "%f\n", db->items[i]);
+    fprintf(out, "%.3g %.1f\n", interval * i, db->items[i]);
 
   // Close the file
   return fclose(out) == 0 ? 0 : 1;

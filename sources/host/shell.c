@@ -166,29 +166,29 @@ int shell_execv(shell_t *shell, char *argv[]) {
 }
 
 
+// Print the shell prompt
+static inline void _prompt(const shell_t *shell) {
+  if (!shell_flag_get(shell, SH_SCRIPT_MODE))
+    fputs(shell->prompt, stdout);
+}
+
 // Launch a shell - Blocks until the user exits
-void shell_loop(shell_t *shell) {
-  if (!shell) return;
+void shell_loop(shell_t *shell, FILE *input) {
+  if (!shell || !input) return;
 
   // Input line entered by the user
   char line[SHELL_LINE_MAX_LEN + 2]; // Consider newline plus null terminator
 
   // Main shell loop
-  fputs(shell->prompt, stdout); // Print first prompt
+  _prompt(shell); // Print first prompt
   while (1) {
     // Get a new input line
-    errno = 0; // fgets does not reset errno on a success consecutive to a failure
-    void *ret_p = fgets(line, SHELL_LINE_MAX_LEN + 2, stdin);
-    if (!ret_p) { // No line was read
-      if (feof(stdin)) break;   // EOF
-      else if (ferror(stdin)) { // fgets() failure (skip iteration)
-        if (errno != EINTR) perror(__func__);
-        continue;
-      }
-      else {
-        err_log("\nNo line was read but fgets() returned NULL");
-        continue;
-      }
+    if (!fgets(line, SHELL_LINE_MAX_LEN + 2, input)) { // No line was read
+      if (feof(input))
+        break;
+      else if (ferror(input) && errno != EINTR)
+        perror(__func__);
+      continue;
     }
 
     // Attempt to execute command
@@ -200,7 +200,7 @@ void shell_loop(shell_t *shell) {
       break;
 
     // Print the shell prompt again for the next input line
-    fputs(shell->prompt, stdout);
+    _prompt(shell);
   }
 
   // User exited, print the exit message and return

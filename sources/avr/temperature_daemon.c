@@ -31,7 +31,6 @@ ISR(TIMER1_COMPA_vect) {
   if (++timer_counter != timer_interval) return;
   timer_counter = 0;
   timer_elapsed = 1;
-  //lm_start_conv();
 }
 
 

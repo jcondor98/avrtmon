@@ -3,11 +3,18 @@
 # Paolo Lucchesi
 
 # Host Compiler setup
-# TODO: Remove -ggdb, restore -std=c99
 CC := gcc
-CFLAGS := -Wall -std=gnu99 -O2 -funsigned-bitfields -fshort-enums \
-  -Wstrict-prototypes -I$(INCDIR)/host -I$(INCDIR) -DDEBUG -lrt -pthread -ggdb
-TESTFLAGS := -Itests/include -I$(INCDIR)/avr -DAVR -DTEST -ggdb -Wno-format
+CFLAGS := -std=gnu99 -Wall -lrt -lpthread -I$(INCDIR)/host -I$(INCDIR) \
+  -funsigned-bitfields -fshort-enums
+TESTFLAGS := -Itests/include -I$(INCDIR)/avr -DAVR -DTEST -Wno-format
+NDEBUGFLAGS := -O2 -DNDEBUG
+DEBUGFLAGS := -O0 -ggdb -DDEBUG
+
+ifndef DEBUG
+  CFLAGS += $(NDEBUGFLAGS)
+else
+  CFLAGS += $(DEBUGFLAGS)
+endif
 
 TARGET := target/host/avrtmon
 $(TARGET): $(OBJECTS)

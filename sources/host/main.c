@@ -25,6 +25,8 @@ static inline void print_usage(void) {
       " -c <avr-file-path>\n"
       "   Automatically connect at <avr-file-path>. Exit if the connention\n"
       "   could not be estabilished\n"
+      " -s [script]\n"
+      "   Script (i.e. non interactive) mode\n"
       " -h    Print a help message and exit\n"
       "\n"
   );
@@ -34,20 +36,32 @@ int main(int argc, const char *argv[]) {
   // Command line arguments
   char *avr_dev_path = NULL; // Path to AVR device file
 
+  // If script mode is enabled, keep track of a script path and file pointer
+  FILE *script_file = NULL;
+  char *script_path = NULL;
+
   // Handle command line arguments
   int opt;
-  while ((opt = getopt(argc, argv, ":c:h")) >= 0) {
+  while ((opt = getopt(argc, argv, ":c:s:h")) >= 0) {
     switch (opt) {
+
       case 'c':
         avr_dev_path = optarg;
         break;
+
       case 'h':
         print_usage();
         exit(EXIT_SUCCESS);
+
       case ':':
-        fprintf(stderr, "Syntax error: Option -%c requires an argument\n", optopt);
-        print_usage();
-        exit(EXIT_FAILURE);
+        if (optopt == 's') script_file = stdin;
+        else {
+          fprintf(stderr, "Syntax error: Option -%c requires an argument\n", optopt);
+          print_usage();
+          exit(EXIT_FAILURE);
+        }
+        break;
+
       case '?':
         fprintf(stderr, "Syntax error: Unrecognized option -%c\n", optopt);
         print_usage();
@@ -78,9 +92,16 @@ int main(int argc, const char *argv[]) {
       exit(EXIT_FAILURE);
   }
 
+  // Handle script if present
+  if (script_path && !(script_file = fopen(script_path, "r"))) {
+      perror("Could not open script file");
+      exit(EXIT_FAILURE);
+  }
+  if (script_file) shell_flag_set(shell, SH_SCRIPT_MODE | SH_EXIT_ON_ERR);
+
 
   // Main shell loop
-  shell_loop(shell);
+  shell_loop(shell, script_file ? script_file : stdin);
 
   // Perform a clean exit from the program
   communication_cleanup();

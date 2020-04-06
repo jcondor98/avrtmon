@@ -54,7 +54,7 @@ host:
 
 
 # Generate the configuration sources
-config_gen:
+config-gen:
 	resources/bin/config-gen -c $(RESDIR)/config/default.csv -N $(SRCDIR)/avr/nvm.c
 
 

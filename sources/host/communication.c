@@ -1,7 +1,5 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Communication layer (host-side) - Source file
-// Paolo Lucchesi - Tue 25 Feb 2020 12:10:03 PM CET
-// TODO: Correctly handle IDs
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -242,7 +240,6 @@ static inline int rto_timer_init(void) {
   rto_timer = (timer_entity_t) {
     .timeval = {
       { 0, 0 }, // One-shot timer
-      //{ 0, RTO_RESOLUTION * ONE_MSEC * (2*RTO_DELIVERY_TIME + 4*RTO_PROCESS_TIME) }
       { 0, RTO_VALUE_MSEC * ONE_MSEC }
     },
   .sig_ev  = { SIGEV_SIGNAL, SIGUSR1 },

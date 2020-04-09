@@ -1,6 +1,5 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Host-side main source file
-// Paolo Lucchesi - Wed 30 Oct 2019 07:24:56 PM CET
 #include <stdio.h>
 #include <stdlib.h> // exit()
 #include <unistd.h> // getopt
@@ -21,18 +20,18 @@ extern void shell_cleanup(shell_t *s);
 // Print a help message for the program
 static inline void print_usage(void) {
   printf("avrtmon -- AVR-based temperature monitor\n"
-      "Usage: avrtmon [OPTION...]\n\n"
-      " -c <avr-file-path>\n"
+      "Usage: avrtmon [OPTION...]\n"
+      "\n -c <avr-file-path>\n"
       "   Automatically connect at <avr-file-path>. Exit if the connention\n"
       "   could not be estabilished\n"
-      " -s [script]\n"
+      "\n -s [script]\n"
       "   Script (i.e. non interactive) mode\n"
-      " -h    Print a help message and exit\n"
+      "\n -h    Print a help message and exit\n"
       "\n"
   );
 }
 
-int main(int argc, const char *argv[]) {
+int main(int argc, char *argv[]) {
   // Command line arguments
   char *avr_dev_path = NULL; // Path to AVR device file
 

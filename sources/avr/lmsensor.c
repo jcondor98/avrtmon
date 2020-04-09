@@ -1,6 +1,5 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // LM Sensor layer - Source file
-// Paolo Lucchesi - Sun 18 Aug 2019 05:31:33 PM CEST
 #include <avr/io.h>
 #include <avr/sleep.h>
 #include <avr/interrupt.h>
@@ -8,14 +7,16 @@
 
 #define POWER_ACT_LED D24
 
+// Set/Clear ADC interrupt flag
+#define lm_sei() do { ADCSRA |=  (1 << ADIE); } while (0)
+#define lm_cli() do { ADCSRA &= ~(1 << ADIE); } while (0)
+
 volatile uint16_t adc_result;
-volatile uint8_t  adc_available;
 volatile uint8_t  adc_ongoing;
 
 
 // ADC conversion complete ISR
 ISR(ADC_vect) {
-  adc_available = 1;
   adc_ongoing = 0;
   adc_result = ADC;
   lm_cli(); // Do not raise interrupts further
@@ -24,6 +25,8 @@ ISR(ADC_vect) {
 
 // Initialize ADC and other required stuff
 void lm_init(uint8_t adc_pin) {
+  adc_ongoing = 0;
+
   // REFS1 -> Internal 2.56V Reference (no external AREF)
   // Select ADC pin configured to handle the LM35 sensor
   ADMUX = (1 << REFS1) | (adc_pin & 0x1F);
@@ -39,13 +42,12 @@ void lm_init(uint8_t adc_pin) {
 }
 
 
-// Start a conversion (and return 0)
-// If the ADC is busy, do not start the conversion and return 1
+// Start a conversion and enter in ADC Noise Reduction sleep mode until the
+// conversion completes
+// Returns the registered temperature, or 0 on failure
 uint8_t lm_convert(void) {
-  // Setup before the conversion (do not go to sleep if global interrupts are
-  // disabled, you would sleep - almost - forever)
-  if (adc_ongoing || !(SREG & (1 << 7))) return 1;
-  adc_ongoing = 1;
+  // Do not go to sleep if global interrupts are disabled
+  if (! (SREG & (1 << 7))) return 0;
   lm_sei();
 
   // Enter in ADC Noise Reduction sleep mode
@@ -56,17 +58,8 @@ uint8_t lm_convert(void) {
   sleep_cpu();
   sleep_disable();
 
-  return 0;
-}
+  // Busy wait if the conversion was interrupted
+  while (adc_ongoing) ;
 
-// Return 1 if there is an ongoing conversion, 0 otherwise
-uint8_t lm_ongoing(void) { return adc_ongoing; }
-
-// Returns 1 if a registered temperature is available, 0 otherwise
-uint8_t lm_available(void) { return adc_available; }
-
-// Get the LM temperature from a raw ADC conversion result
-uint16_t lm_getresult(void) {
-  adc_available = 0; // Last result will be returned anyway
   return adc_result;
 }

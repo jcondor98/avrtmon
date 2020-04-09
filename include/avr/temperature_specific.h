@@ -1,8 +1,7 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // AVR-side specific temperature interface - Head file
-// Paolo Lucchesi - Wed 21 Aug 2019 04:14:15 PM CEST
-#ifndef __TEMPERATURE_AVR_H
-#define __TEMPERATURE_AVR_H
+#ifndef __TEMPERATURE_SPECIFIC_AVR_H
+#define __TEMPERATURE_SPECIFIC_AVR_H
 
 #ifndef __TEMPERATURE_INTERFACE_H
 #error "Do not use implementation-specific temperature modules directly. Instead, '#include \"temperature.h\"'"
@@ -57,4 +56,4 @@ void temperature_db_reset(void);
 // Returns 0 on success, 1 if 'dest' is not valid or the DB does not exist
 uint8_t temperature_db_info(uint8_t db_id, temperature_db_info_t dest);
 
-#endif  // __TEMPERATURE_AVR_H
+#endif  // __TEMPERATURE_SPECIFIC_AVR_H

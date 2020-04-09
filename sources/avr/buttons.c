@@ -1,12 +1,9 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Buttons Handler - Source file
-// Paolo Lucchesi - Tue 29 Oct 2019 11:57:18 AM CET
 #include <avr/interrupt.h>
 #include "buttons.h"
 
 #define OCR_ONE_MSEC 15.625
-#define DEFAULT_DEBOUNCE_TIME 30
-
 
 // Buttons used in the module
 static button_t buttons[BUTTON_COUNT] = { 0 };

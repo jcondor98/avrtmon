@@ -1,6 +1,5 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Serial interface - Source file
-// Paolo Lucchesi - Wed 30 Oct 2019 11:55:02 PM CET
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>

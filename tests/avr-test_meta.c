@@ -1,6 +1,5 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Test Unit on data structures metadata et similia - AVR side
-// Paolo Lucchesi - Tue 17 Dec 2019 12:31:34 AM CET
 #include <stdio.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>

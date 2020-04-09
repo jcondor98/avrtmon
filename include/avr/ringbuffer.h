@@ -1,8 +1,7 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Ring Buffer data structure - Head file
-// Paolo Lucchesi - Mon 30 Dec 2019 03:00:30 AM CET
-#ifndef __RING_BUFFER_STRUCT_H
-#define __RING_BUFFER_STRUCT_H
+#ifndef __RINGBUFFER_STRUCT_H
+#define __RINGBUFFER_STRUCT_H
 #include <stdint.h>
 
 enum RINGBUFFER_STATE_E { RINGBUFFER_NOT_FULL = 0, RINGBUFFER_FULL };
@@ -43,7 +42,7 @@ void ringbuffer_flush(ringbuffer_t*);
 
 // Print the internal elements (without the raw buffer) of a ringbuffer
 #if defined(TEST) || !defined(AVR)
-void ringbuffer_print(ringbuffer_t *rb);
+void ringbuffer_print(ringbuffer_t*);
 #endif
 
-#endif    // __RING_BUFFER_STRUCT_H
+#endif  // __RINGBUFFER_STRUCT_H

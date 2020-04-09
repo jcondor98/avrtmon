@@ -1,6 +1,5 @@
-// avrtmon
-// Program shell (i.e. command line) - Unit test
-// Paolo Lucchesi - Thu 31 Oct 2019 07:22:35 PM CET
+// AVR Temperature Monitor -- Paolo Lucchesi
+// Program shell (i.e. command line) - Test Unit
 #include <stdio.h>
 #include "shell.h"
 

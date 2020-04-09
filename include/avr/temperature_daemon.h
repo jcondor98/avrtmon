@@ -1,6 +1,5 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Daemon for registering temperatures - Head file
-// Paolo Lucchesi - Thu 26 Mar 2020 04:05:12 PM CET
 #ifndef __TEMPERATURE_DAEMON_H
 #define __TEMPERATURE_DAEMON_H
 #include <stdint.h>
@@ -24,4 +23,4 @@ uint16_t temperature_daemon_get_interval(void);
 // Always returns 0
 uint8_t temperature_daemon_handler(void);
 
-#endif    // __TEMPERATURE_DAEMON_H
+#endif  // __TEMPERATURE_DAEMON_H

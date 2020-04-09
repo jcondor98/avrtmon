@@ -1,14 +1,8 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // AVR-side Configuration - Source file
-// Paolo Lucchesi - Tue 27 Aug 2019 06:58:59 PM CEST
 #include <string.h> // memcpy
 #include <stddef.h> // offsetof
-
 #include "config.h"
-
-#ifdef AVR
-#include "nvm.h"
-#endif
 
 
 // Stuff common to host and AVR
@@ -25,6 +19,7 @@ static const config_field_accessor_t cfg_accessors[CONFIG_FIELD_COUNT] = {
   { .size = sizeof(uint16_t), .offset = offsetof(config_t, temperature_timer_interval) },
   { .size = sizeof(uint8_t), .offset = offsetof(config_t, lmsensor_pin) },
   { .size = sizeof(uint8_t), .offset = offsetof(config_t, btn_debounce_time) },
+  { .size = sizeof(uint8_t), .offset = offsetof(config_t, poweroff_pin) },
   { .size = sizeof(uint8_t), .offset = offsetof(config_t, start_pin) },
   { .size = sizeof(uint8_t), .offset = offsetof(config_t, stop_pin) }
 };
@@ -37,6 +32,7 @@ uint8_t config_get_size(config_field_t field) {
 
 // AVR-side stuff
 #ifdef AVR
+#include "nvm.h"
 
 // Configuration data which lives in memory
 static config_t config;
@@ -100,6 +96,7 @@ static const char *_config_field_str[] = {
   "temperature_timer_interval",
   "lmsensor_pin",
   "btn_debounce_time",
+  "poweroff_pin",
   "start_pin",
   "stop_pin"
 };
@@ -126,8 +123,7 @@ int config_field_id(const char *desc, config_field_t *dest) {
 #endif  // AVR
 
 
-// The functions below shall be used only for testing
-#ifdef TEST
+#ifdef TEST // The functions below shall be used only for testing
 
 // Get the offset of a single field
 uint8_t config_get_offset(config_field_t field) {

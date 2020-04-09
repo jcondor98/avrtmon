@@ -1,10 +1,10 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Communication handler - Source File
-// Paolo Lucchesi - Mon 17 Feb 2020 03:23:45 PM CET
 // TODO: Find a way to correctly discard packets (e.g. flush the serial buffer
 // and wait a while)
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <stddef.h>
 
 #include "communication.h"
 #include "command.h"
@@ -19,26 +19,40 @@
 // The variable name is long on purpose (global variable)
 static uint8_t packet_global_id;
 
-// Scaled timer variables for RTO
-static volatile uint16_t rto_counter;
-static volatile uint8_t  rto_elapsed; // 1 if it is elapsed, 0 if not
-static volatile uint16_t rto_ongoing;
 
-//static const uint16_t rto = 2 * RTO_DELIVERY_TIME + 4 * RTO_PROCESS_TIME (ms)
-static const uint16_t rto = 500 / RTO_RESOLUTION; // Half second
+// Scaled timer variables for RTO
+static const uint16_t rto = 500; // RTO in milliseconds
+static volatile uint8_t rto_elapsed; // 1 if it is elapsed, 0 if not
+static volatile uint8_t rto_ongoing;
+
+// Stop the timer
+static inline void rto_timer_stop(void) {
+  TIMSK3 &= ~(1 << OCIE3A);
+  rto_ongoing = 0;
+}
+
+// Start the timer, resetting it if it is ongoing
+static inline void rto_timer_start(void) {
+  if (rto_ongoing) rto_timer_stop();
+  rto_ongoing = 1;
+  rto_elapsed = 0;
+  //TCNT3 = 0; // Reset timer counter
+  TIMSK3 |= (1 << OCIE3A); // Enable timer interrupt
+}
+
+// RTO Timer ISR -- Timer 3 is used
+ISR(TIMER3_COMPA_vect) {
+  rto_timer_stop();
+  rto_elapsed = 1;
+}
+
 
 // Communication Opmode variables
 static com_operation_f opmode_default[];
 static com_opmode_t opmode = opmode_default;
 
-// Command currently in use
-static command_id_t command_current = COMMAND_NONE;
+static command_id_t command_current = COMMAND_NONE; // Command currently in use
 static uint8_t command_notified = 0; // Handle command notifications
-
-
-// Start the RTO timer, resetting it if it is ongoing, or stop it
-static void rto_timer_start(void);
-static void rto_timer_stop(void);
 
 // End the current command
 static inline void command_end(void) {
@@ -52,16 +66,12 @@ void communication_init(void) {
   serial_init(); // Initialize serial port
 
   // Initialize the RTO Timer
-  // Set the prescaler to 1024
   TCCR3A = 0;
   TCCR3B = (1 << WGM52) | (1 << CS50) | (1 << CS52);
-
-  // Set the OCR value
-  OCR3A = (uint16_t)(15.625 * RTO_RESOLUTION);
+  OCR3A = (uint16_t)(15.625 * rto);
 
   // Initialize variables
   packet_global_id = 0;
-  rto_counter = 0;
   rto_elapsed = 0;
   rto_ongoing = 0;
 }
@@ -225,39 +235,10 @@ void communication_opmode_restore(void) {
 
 
 
-// RTO Timer ISR -- Timer 3 is used
-ISR(TIMER3_COMPA_vect) {
-  if (++rto_counter >= rto) {
-    TIMSK3 &= ~(1 << OCIE3A);
-    rto_elapsed = 1;
-    rto_ongoing = 0;
-  }
-}
-
-// Start the timer, resetting it if it is ongoing
-static void rto_timer_start(void) {
-  if (rto_ongoing) rto_timer_stop();
-  rto_counter = 0;
-  rto_ongoing = 1;
-  rto_elapsed = 0;
-  TIMSK3 |= (1 << OCIE3A);
-}
-
-// Stop the timer
-static void rto_timer_stop(void) {
-  TIMSK3 &= ~(1 << OCIE3A);
-  rto_ongoing = 0;
-}
-
-
-
 // Default, built-in communication opmode
 // Operation for PACKET_TYPE_HND -- Reset the communication environment
-// TODO: Restore what is necessary
 static uint8_t _op_hnd(const packet_t *rx_pack) {
   communication_opmode_restore();
-  //serial_rx_reset();
-  //serial_tx_reset();
   return CMD_RET_ONGOING;
 }
 

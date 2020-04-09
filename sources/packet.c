@@ -1,14 +1,7 @@
-// avrtmon
-// Packet-switched communication layer - Packet interface
-// Source file
-// Paolo Lucchesi - Sat 03 Aug 2019 12:33:20 PM CEST
+// AVR Temperature Monitor -- Paolo Lucchesi
+// Packet-switched communication layer - Packet interface - Source file
 #include <string.h>
 #include "packet.h"
-
-#if defined(TEST) || !defined(AVR)
-#include <stdio.h>
-#include <ctype.h>
-#endif
 
 // Bit fields parameter for the downstainding base type
 #define BITFIELD_BASE_TYPE uint8_t
@@ -39,7 +32,7 @@ static inline BITFIELD_BASE_TYPE _bitfield_set(uint8_t src, uint8_t val, uint8_t
   return (src & ~bitmask) ^ ((val << a) & bitmask);
 }
 
-// Setters (source at the bottom of this source file
+// Setters (source at the bottom of this source file)
 TEST_EXPOSED void packet_set_type(packet_t *p, uint8_t type);
 TEST_EXPOSED void packet_set_size(packet_t *p, uint8_t size);
 TEST_EXPOSED void packet_set_id(packet_t *p, uint8_t id);
@@ -183,6 +176,8 @@ TEST_EXPOSED void packet_set_size(packet_t *p, uint8_t size) {
 
 // Print out a complete representation of a packet
 #if defined(TEST) || !defined(AVR)
+#include <stdio.h>
+#include <ctype.h>
 void packet_print(const packet_t *p) {
   if (!p) {
     printf("Pointer to packet is NULL\n");

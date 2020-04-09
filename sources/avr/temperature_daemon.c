@@ -1,6 +1,5 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Daemon for registering temperatures - Source file
-// Paolo Lucchesi - Thu 26 Mar 2020 04:05:12 PM CET
 #include <avr/interrupt.h>
 #include <util/delay.h>
 
@@ -10,7 +9,7 @@
 #include "led.h"
 
 #define MIN_REGISTRATION_INTERVAL 50
-#define TEMPERATURE_REGISTERING_LED D23
+#define TEMPERATURE_REGISTERING_LED D24
 #define OCR_ONE_MSEC 15.625
 
 // Set/Clear timer interrupt flag (Use Timer 1)
@@ -71,7 +70,6 @@ void temperature_daemon_start(uint8_t pressed) {
 void temperature_daemon_stop(uint8_t pressed) {
   td_cli();
   timer_ongoing = 0;
-  lm_getresult(); // Discard last result if present
   led_off(TEMPERATURE_REGISTERING_LED);
 }
 
@@ -79,7 +77,6 @@ void temperature_daemon_stop(uint8_t pressed) {
 uint8_t temperature_daemon_ongoing(void) { return timer_ongoing; }
 
 // Get timer resolution/interval
-// TODO: Setters?
 uint16_t temperature_daemon_get_resolution(void) { return timer_resolution; }
 uint16_t temperature_daemon_get_interval(void)   { return timer_interval; }
 
@@ -87,14 +84,10 @@ uint16_t temperature_daemon_get_interval(void)   { return timer_interval; }
 // Handle daemon "notifications", must be run periodically
 // In practice, register new temperatures if there is any
 uint8_t temperature_daemon_handler(void) {
-  //if (!lm_ongoing()) return 0;
   if (!timer_elapsed) return 0;
   timer_elapsed = 0;
 
-  lm_convert();
-  while (lm_ongoing()) ; // Waits only if conversion was interrupted
-
-  if (temperature_register(lm_getresult()) != 0)
+  if (temperature_register(lm_convert()) != 0)
     temperature_daemon_stop(1);
   return 0; // Always returns 0
 }

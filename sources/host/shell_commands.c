@@ -1,6 +1,5 @@
-// avrtmon
-// Program shell (i.e. command line) - Commands
-// Paolo Lucchesi - Tue 05 Nov 2019 01:36:25 AM CET
+// AVR Temperature Monitor -- Paolo Lucchesi
+// Program shell - Commands
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -231,7 +230,6 @@ int tmon_reset(int argc, char *argv[], void *storage) {
 //        tmon-config get <field>
 //        tmon-config set <field> <value>
 // Manipulate the tmon configuration
-// TODO: Test
 int tmon_config(int argc, char *argv[], void *storage) {
   _storage_cast(st, storage);
   if (argc < 2 || argc > 4) return 1;

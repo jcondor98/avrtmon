@@ -1,6 +1,5 @@
-// avrtmon
-// Serial communication layer - Unit test
-// Paolo Lucchesi - Sun 11 Aug 2019 03:26:17 PM CEST
+// AVR Temperature Monitor -- Paolo Lucchesi
+// Serial communication layer - Test Unit
 // This AVR-side program expects to receive all the lowercase of the latin
 // alphabet, and sends back those letters in uppercase.
 #include <avr/io.h>

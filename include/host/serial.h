@@ -1,18 +1,20 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Serial interface - Head file
-// Paolo Lucchesi - Wed 30 Oct 2019 11:55:38 PM CET
-// Use POSIX standard read() and write() for communication
-#ifndef __SERIAL_INTERFACE_H
-#define __SERIAL_INTERFACE_H
+// NOTE: Uses POSIX standard read() and write() for communication
+#ifndef __SERIAL_MODULE_H
+#define __SERIAL_MODULE_H
 #include <unistd.h>
 #include <pthread.h>
-
 #include "packet.h"
-#include "command.h"
 #include "ringbuffer.h"
 
 #define BAUD_RATE B57600
-#define RX_BUF_SIZE 512 // TODO: Lower when not testing/debugging
+
+#if defined(DEBUG) && !defined(RX_BUF_SIZE)
+#define RX_BUF_SIZE 512
+#elif !defined(RX_BUF_SIZE)
+#define RX_BUF_SIZE 64
+#endif
 
 
 // Serial context to make the module completely reentrant
@@ -24,6 +26,7 @@ typedef struct _serial_context_s {
     unsigned char ongoing;
   } rx;
 } serial_context_t;
+
 
 // Open a serial device
 // Return a pointer to an allocated and initialized context, or NULL on failure
@@ -56,6 +59,6 @@ size_t serial_rx_available(serial_context_t*);
 unsigned char serial_rx_ongoing(serial_context_t*);
 
 // Flush the RX buffers (RX thread ringbuffer and kernel internal buffer)
-void serial_rx_flush(serial_context_t *ctx);
+void serial_rx_flush(serial_context_t*);
 
-#endif    // __SERIAL_INTERFACE_H
+#endif  // __SERIAL_MODULE_H

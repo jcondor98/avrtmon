@@ -1,6 +1,5 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Unified temperature interface - Head file
-// Paolo Lucchesi - Wed 25 Mar 2020 12:18:47 AM CET
 #ifndef __TEMPERATURE_INTERFACE_H
 #define __TEMPERATURE_INTERFACE_H
 #include <stdint.h>
@@ -39,4 +38,4 @@ uint8_t temperature_db_info_extract(const temperature_db_info_t src, uint8_t *id
 #include "temperature_specific.h"
 #endif // __TEMPERATURE_INDEPENDENT
 
-#endif    // __TEMPERATURE_INTERFACE_H
+#endif  // __TEMPERATURE_INTERFACE_H

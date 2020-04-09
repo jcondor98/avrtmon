@@ -1,6 +1,5 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Debug and error handling facilities - Host side
-// Paolo Lucchesi - Sat 30 Nov 2019 02:35:28 AM CET
 #ifndef __DEBUG_H
 #define __DEBUG_H
 #include <stdio.h>
@@ -63,4 +62,4 @@
   }\
 } while (0)
 
-#endif    // __DEBUG_H
+#endif  // __DEBUG_H

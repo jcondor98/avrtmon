@@ -1,6 +1,8 @@
+// AVR Temperature Monitor -- Paolo Lucchesi
+// Linked list - Source file
 #include <stdlib.h>
 #include <string.h>
-#include "host/list.h"
+#include "list.h"
 
 
 // [AUX] Create a new list node

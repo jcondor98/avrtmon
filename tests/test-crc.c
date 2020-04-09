@@ -1,6 +1,5 @@
-// avrtmon
-// Packet-switched communication layer - CRC Tests
-// Paolo Lucchesi - Mon 05 Aug 2019 03:55:51 AM CEST
+// AVR Temperature Monitor -- Paolo Lucchesi
+// Packet-switched communication layer - CRC - Test Unit
 #include <stdio.h>
 #include <string.h>
 #include "test_framework.h"

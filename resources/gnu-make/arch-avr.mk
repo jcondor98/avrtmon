@@ -1,16 +1,17 @@
 # avrtmon
 # GNU Make common rules for AVR compilation
-# All rights to Prof. Giorgio Grisetti - This file was also heavily modified
+# Rights to Prof. Giorgio Grisetti - This file was also heavily modified
 
 # AVR Compiler and Programmer setup
 CC := avr-gcc
 AS := avr-gcc
-CFLAGS := -Wall --std=c99 -DF_CPU=16000000UL -O3 -funsigned-char \
+CFLAGS := -Wall --std=gnu99 -DF_CPU=16000000UL -O3 -funsigned-char \
 		-funsigned-bitfields  -fshort-enums -Wstrict-prototypes \
 		-mmcu=atmega2560 -I$(INCDIR)/avr -I$(INCDIR) -DAVR -D__AVR_3_BYTE_PC__
 ASFLAGS := -x assembler-with-cpp $(CFLAGS)
 
-OBJECTS += $(patsubst sources/avr/commands/%.c, $(OBJDIR)/commands/%.o, $(wildcard sources/avr/commands/*.c))
+OBJECTS += $(patsubst sources/avr/commands/%.c, $(OBJDIR)/commands/%.o, \
+		   $(wildcard sources/avr/commands/*.c))
 
 AVRDUDE := avrdude
 # com1 = serial port. Use lpt1 to connect to parallel port.
@@ -29,37 +30,10 @@ avrdude_write_flash = -U flash:w:$(strip $(1)):i
 avrdude_write_eeprom = -U eeprom:w:$(strip $(1)):i
 
 
-# AVR-specific binaries recipes
-target/avr/avrtmon.elf:	$(OBJECTS)
-	@#echo Objects to compile: $(OBJECTS)
-	$(CC) $(CFLAGS) -o $@ $^
-
-target/avr/test_serial.elf: tests/serial/avr_test_serial.c $(OBJDIR)/serial.o $(OBJDIR)/ringbuffer.o
-	@echo Objects to compile: $(OBJECTS)
-	$(CC) $(CFLAGS) -o $@ $^
-
-target/avr/test_timer.elf: tests/avr_test_timer.c $(OBJDIR)/serial.o $(OBJDIR)/ringbuffer.o
-	@echo Objects to compile: $(OBJECTS)
-	$(CC) $(CFLAGS) -o $@ $^
-
-target/avr/test_meta.elf: tests/avr_test_meta.c $(OBJDIR)/serial.o $(OBJDIR)/packet.o $(OBJDIR)/crc.o $(OBJDIR)/ringbuffer.o
-	$(CC) $(CFLAGS) -o $@ $^
-
-target/avr/test_buttons.elf: tests/avr_test_buttons.c $(OBJDIR)/buttons.o $(OBJDIR)/serial.o $(OBJDIR)/ringbuffer.o
-	$(CC) $(CFLAGS) -o $@ $^
-
-target/avr/test_nvm.elf: tests/avr_test_nvm.c $(OBJDIR)/nvm.o $(OBJDIR)/serial.o $(OBJDIR)/ringbuffer.o
-	$(CC) $(CFLAGS) -o $@ $^
-
-avr_test_buttons: target/avr/test_buttons.hex ;
-avr_test_serial: target/avr/test_serial.hex ;
-avr_test_timer: target/avr/test_timer.hex ;
-avr_test_meta: target/avr/test_meta.hex ;
-avr_test_nvm: target/avr/test_nvm.hex ;
-
 %.eep:	%.elf
 	avr-objcopy -j .eeprom --set-section-flags=.eeprom="alloc,load" \
-	  --change-section-lma .eeprom=0 --no-change-warnings -O ihex $< $@ || exit 1
+	  --change-section-lma .eeprom=0 --no-change-warnings \
+	  -O ihex $< $@ || exit 1
 
 %.hex:	%.eep %.elf
 	avr-objcopy -O ihex -R .eeprom $(patsubst %.hex, %.elf, $@) $@
@@ -68,5 +42,33 @@ avr_test_nvm: target/avr/test_nvm.hex ;
 
 flash:
 	make target/avr/avrtmon.hex
+
+
+# AVR-specific binaries recipes
+avr-test-%: target/avr/test-%.hex ;
+
+target/avr/avrtmon.elf:	$(OBJECTS)
+	$(CC) $(CFLAGS) -o $@ $^
+
+target/avr/test-serial.elf: tests/serial/avr-test-serial.c \
+  $(addprefix $(OBJDIR), serial.o ringbuffer.o)
+	$(CC) $(CFLAGS) -o $@ $^
+
+target/avr/test-timer.elf: tests/avr-test-timer.c \
+  $(addprefix $(OBJDIR), serial.o ringbuffer.o)
+	$(CC) $(CFLAGS) -o $@ $^
+
+target/avr/test-meta.elf: tests/avr-test-meta.c \
+  $(addprefix $(OBJDIR), serial.o packet.o crc.o ringbuffer.o)
+	$(CC) $(CFLAGS) -o $@ $^
+
+target/avr/test-buttons.elf: tests/avr-test-buttons.c \
+  $(addprefix $(OBJDIR), buttons.o serial.o ringbuffer.o)
+	$(CC) $(CFLAGS) -o $@ $^
+
+target/avr/test-nvm.elf: tests/avr-test-nvm.c \
+  $(addprefix $(OBJDIR), nvm.o serial.o ringbuffer.o)
+	$(CC) $(CFLAGS) -o $@ $^
+
 
 TARGET := target/avr/avrtmon.elf

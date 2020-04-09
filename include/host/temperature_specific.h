@@ -1,8 +1,7 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Host-side specific temperature interface - Head file
-// Paolo Lucchesi - Wed 30 Oct 2019 12:12:31 AM CET
-#ifndef __TEMPERATURE_HOST_H
-#define __TEMPERATURE_HOST_H
+#ifndef __TEMPERATURE_SPECIFIC_HOST_H
+#define __TEMPERATURE_SPECIFIC_HOST_H
 
 #ifndef __TEMPERATURE_INTERFACE_H
 #error "Do not use implementation-specific temperature modules directly. Instead, '#include \"temperature.h\"'"
@@ -13,7 +12,7 @@
 // This data structure is intended to be constant; there are no function to
 // modify or remove temperatures
 typedef struct _temperature_db_s {
-  unsigned id;    // ID of the database (multiple databases can be stored)
+  unsigned id;   // ID of the database (multiple databases can be stored)
   unsigned size;
   unsigned used;
   unsigned reg_resolution; // Registration timer resolution
@@ -60,6 +59,9 @@ unsigned temperature_get_bulk(const temperature_db_t *db, unsigned start_id,
 unsigned temperature_register_bulk(temperature_db_t *db,
     unsigned ntemps, const float *src);
 
+// Convert a raw temperature (i.e. uint16_t) coming from the avrtmon to a float
+float temperature_raw2float(temperature_t raw);
+
 // Export a temperature database as a text file containing newline separated
 // strings, representing the temperatures.
 // The first two lines are respectively the ID and the size
@@ -69,9 +71,4 @@ int temperature_db_export(const temperature_db_t *db, const char *fpath);
 // Print a database
 void temperature_db_print(const temperature_db_t *db);
 
-
-// Convert a raw temperature (i.e. uint16_t) coming from the avrtmon to a float
-// TODO: Do a proper conversion
-float temperature_raw2float(uint16_t raw);
-
-#endif  // __TEMPERATURE_HOST_H
+#endif  // __TEMPERATURE_SPECIFIC_HOST_H

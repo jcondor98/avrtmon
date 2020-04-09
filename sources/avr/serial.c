@@ -1,6 +1,5 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Serial communication layer - Source file
-// Paolo Lucchesi - Fri 09 Aug 2019 07:35:01 PM CEST
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>

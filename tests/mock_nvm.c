@@ -1,9 +1,8 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Mock NVM Implementation - Source file
 #include <stdio.h>
 #include <string.h>
 #include <stddef.h> // offsetof macro
-#include <assert.h>
 
 #ifndef TEST
 #error "Cannot use mock NVM module when not testing. You should '#define TEST'"
@@ -19,8 +18,8 @@ nvm_image_t *nvm_image = (nvm_image_t*) mock_nvm;
 // Initialize mock NVM module
 // Every bit of uninitialized NVM data is set to 1, as in a real EEPROM
 void nvm_mock_init(void) {
+  memset(mock_nvm, 0xFF, NVM_SIZE);
   memcpy(mock_nvm, _nvm_image_ptr, sizeof(nvm_image_t));
-  memset(mock_nvm + sizeof(nvm_image_t), 0xFF, NVM_SIZE - sizeof(nvm_image_t));
 }
 
 void nvm_read(void *dest, const void *src, size_t size) {

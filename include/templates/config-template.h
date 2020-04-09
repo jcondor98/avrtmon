@@ -1,8 +1,7 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // AVR-side Configuration - Head file
-// Paolo Lucchesi - Tue 27 Aug 2019 06:58:41 PM CEST
-#ifndef __CONFIGURATION_H
-#define __CONFIGURATION_H
+#ifndef __CONFIGURATION_MODULE_H
+#define __CONFIGURATION_MODULE_H
 #include <stdint.h>
 
 
@@ -77,4 +76,4 @@ uint8_t config_dump(void *dest);
 
 #endif  // TEST
 
-#endif    // __CONFIGURATION_H
+#endif  // __CONFIGURATION_MODULE_H

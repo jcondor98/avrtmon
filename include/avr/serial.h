@@ -1,15 +1,7 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Serial communication layer - Source file
-// Paolo Lucchesi - Fri 09 Aug 2019 07:35:56 PM CEST
-// NOTE: Beware the way you send data from the host to the AVR board; if you
-// send a long string, bigger than the buffer, expect data to be dropped. If you
-// want to send a lot of data in one stroke, you have to wait between each byte.
-// This is because most (or every, dunno) AVR boards do not have a real,
-// reasonably large buffer for the usart communication, in fact, they have a
-// duplex single byte register (i.e. UDR0[RX] and UDR0[TX]), and this specific
-// implementation does not protect (for now) from data overrun errors
-#ifndef __SERIAL_LAYER_H
-#define __SERIAL_LAYER_H
+#ifndef __SERIAL_MODULE_H
+#define __SERIAL_MODULE_H
 #include <stdint.h>
 
 // USART Parameters
@@ -18,12 +10,12 @@
 
 // Transmission buffer size - Default is 64
 #ifndef TX_BUFFER_SIZE
-#define TX_BUFFER_SIZE 64
+#define TX_BUFFER_SIZE 32
 #endif
 
 // Reception buffer size - Default is 64
 #ifndef RX_BUFFER_SIZE
-#define RX_BUFFER_SIZE 64
+#define RX_BUFFER_SIZE 32
 #endif
 
 
@@ -62,4 +54,4 @@ uint8_t serial_tx_ongoing(void);
 void serial_rx_reset(void);
 void serial_tx_reset(void);
 
-#endif    // __SERIAL_LAYER_H
+#endif    // __SERIAL_MODULE_H

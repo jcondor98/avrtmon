@@ -1,8 +1,7 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Non-Volatile Memory interface (MCU: Atmel ATMega2560)
-// Paolo Lucchesi - Wed 21 Aug 2019 04:43:08 PM CEST
 // NOTE: the order of the arguments has been changed to gain consistency across
-// the interface and to fulfill UNIX standard functions (e.g. memcpy)
+// the interface and to fulfill UNIX standard functions (e.g. memcpy, read ...)
 #ifndef __NVM_INTERFACE_H
 #define __NVM_INTERFACE_H
 #include <stddef.h>
@@ -28,6 +27,7 @@ typedef struct _nvm_image_s {
 
 #ifdef TEST // Use mock interface when testing
 #include "nvm_mock.h"
+
 
 #else  // AVR real NVM interface
 #include <avr/eeprom.h>
@@ -55,7 +55,7 @@ typedef struct _nvm_image_s {
 // Do nothing while an NVM operation is ongoing
 #define nvm_busy_wait() eeprom_busy_wait()
 
-#endif    // TEST/AVR
+#endif  // TEST/AVR
 
 
 // Pointer to the memory image
@@ -64,4 +64,4 @@ typedef struct _nvm_image_s {
 // You should use 'nvm_image' instead
 nvm_image_t *_nvm_image_ptr;
 
-#endif    // __NVM_INTERFACE_H
+#endif  // __NVM_INTERFACE_H

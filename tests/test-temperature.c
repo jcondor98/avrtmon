@@ -1,27 +1,18 @@
-// avrtmon
-// Temperature database - Head file
-// Paolo Lucchesi - Test Unit
+// AVR Temperature Monitor -- Paolo Lucchesi
+// Temperature database - Test Unit
 #include <stdio.h>
 #include "test_framework.h"
-#include "nvm.h"
-
 #include "temperature.h"
+#include "nvm.h"
 
 
 #define TEST_ITEMS_MAX 3  // Avoid long iterations for repetitive tests
+#define REG_RESOLUTION 1000
+#define REG_INTERVAL 1
+
 
 int main(int argc, const char *argv[]) {
   printf("avrtmon - Temperature Database Test Unit\n\n");
-
-  /* Debug info which has been used for the unit test itself
-  printf("NVM image address    -> %p\n", nvm_image);
-  printf("config_t size        -> %d\n", sizeof(nvm_image->config));
-  printf("temperature_db_t size-> %d\n", sizeof(nvm_image->db));
-  printf("DB capacity          -> %d\n", nvm_image->db.capacity);
-  printf("TEMP_DB_CAPACITY     -> %d\n", TEMP_DB_CAPACITY);
-  printf("NVM base address     -> %p\n", nvm);
-  printf("sizeof(temperature_db_t) -> %d\n", sizeof(temperature_db_t));
-  */
 
   int ret;
   const temperature_id_t test_items_limit = TEST_ITEMS_MAX;
@@ -31,8 +22,7 @@ int main(int argc, const char *argv[]) {
 
 
   // Initialize temperatures DB module
-  test_expr(temperature_init() == 0,
-      "Temperatures DB module should be succesfully initialized");
+  temperature_init();
   test_expr(temperature_count_all() == 0,
       "Total number of registered temperatures should be initially null");
   test_expr(temperature_count(0) == 0,
@@ -70,7 +60,8 @@ int main(int argc, const char *argv[]) {
 
   // Create another DB
   printf("\nTesting temperature_db_new routine\n");
-  test_expr(temperature_db_new() == 0, "New DB should be created successfully");
+  test_expr(temperature_db_new(REG_RESOLUTION, REG_INTERVAL) == 0,
+      "New DB should be created successfully");
 
   // Register a temperature in the new DB
   test_expr(temperature_register(0) == 0,

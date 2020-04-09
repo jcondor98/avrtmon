@@ -1,13 +1,7 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Multi-threaded ringbuffer data structure - Source file
-// Paolo Lucchesi - Mon 30 Dec 2019 03:35:41 AM CET
-#include "ringbuffer.h" // Also includes pthread library
 #include <stdlib.h>
-
-#if defined(TEST) || !defined(AVR)
-#include <stdio.h>
-#include <string.h>
-#endif
+#include "ringbuffer.h" // Also includes pthread library
 
 
 // [AUX] Get the real index of an item given its virtual address
@@ -167,6 +161,8 @@ void ringbuffer_flush(ringbuffer_t *rb) {
 
 // Print the internal elements (without the raw buffer) of a ringbuffer
 #if defined(TEST)
+#include <stdio.h>
+#include <string.h>
 void ringbuffer_print(ringbuffer_t *rb) {
   if (!rb) return;
 

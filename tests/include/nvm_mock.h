@@ -1,6 +1,5 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Mock NVM Implementation - Head file
-// Paolo Lucchesi - Thu 22 Aug 2019 04:22:50 PM CEST
 #ifndef __NVM_INTERFACE_MOCK_H
 #define __NVM_INTERFACE_MOCK_H
 

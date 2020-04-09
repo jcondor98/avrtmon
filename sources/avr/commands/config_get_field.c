@@ -1,6 +1,5 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Command interface - Single command template
-// Paolo Lucchesi - Wed 23 Oct 2019 04:56:11 PM CEST
 #include <string.h>
 #include "communication.h"
 #include "command.h"

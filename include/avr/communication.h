@@ -1,16 +1,8 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Communication handler - Head file
-// Paolo Lucchesi - Fri 27 Sep 2019 07:29:48 PM CEST
-#ifndef __COMMUNICATION_HANDLER_H
-#define __COMMUNICATION_HANDLER_H
+#ifndef __COMMUNICATION_MODULE_H
+#define __COMMUNICATION_MODULE_H
 #include "packet.h"
-
-// Resolution of the RTO timer in millisecond
-#define RTO_RESOLUTION 6
-
-// Timing Parameters (in RTO_RESOLUTION units)
-#define RTO_DELIVERY_TIME 4 // Time to (only) deliver a packet
-#define RTO_PROCESS_TIME  1 // Time to process a packet (received or to be sent)
 
 // Number of maximum attempts to send/receive a single packet
 #define MAXIMUM_SEND_ATTEMPTS 3
@@ -18,11 +10,11 @@
 
 // Precise error state codes for receiving/sending errors
 typedef enum ERR_CODE_E {
-  E_SUCCESS = 0, E_TIMEOUT_ELAPSED, E_CORRUPTED_HEADER, E_CORRUPTED_CHECKSUM, E_ID_MISMATCH
+  E_SUCCESS = 0, E_TIMEOUT_ELAPSED, E_CORRUPTED_HEADER,
+  E_CORRUPTED_CHECKSUM, E_ID_MISMATCH
 } err_code_t;
 
 // Type definition for a communication operation
-// TODO: Correct in 'communication_*' ?
 typedef uint8_t (*com_operation_f)(const packet_t *rx_pack);
 typedef com_operation_f* com_opmode_t;
 
@@ -58,4 +50,4 @@ void communication_opmode_restore(void);
 void com_craft_and_send(packet_type_t type, const uint8_t *data,
     uint8_t data_size);
 
-#endif    // __COMMUNICATION_HANDLER_H
+#endif  // __COMMUNICATION_MODULE_H

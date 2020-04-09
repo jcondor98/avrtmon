@@ -1,7 +1,5 @@
-// avrtmon
-// Packet-switched communication layer - Cyclic Redundancy Checksum
-// Source file
-// Paolo Lucchesi - Mon 05 Aug 2019 10:38:48 PM CEST
+// AVR Temperature Monitor -- Paolo Lucchesi
+// Cyclic Redundancy Checksum - Source file
 #include "crc.h"
 
 // Lookup table for the default CRC-8 polynomial (bottom of this source file)

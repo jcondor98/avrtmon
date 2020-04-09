@@ -1,11 +1,9 @@
-// avrtmon
-// Packet-switched communication layer - Packet interface
-// Test Unit
-// Paolo Lucchesi - Tue 06 Aug 2019 01:55:04 PM CEST
+// AVR Temperature Monitor -- Paolo Lucchesi
+// Packet-switched communication layer - Packet interface - Test Unit
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
-#include "include/test_framework.h"
+#include "test_framework.h"
 
 #include "packet.h"
 

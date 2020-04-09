@@ -1,10 +1,8 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Packet-switched communication layer - Head file
-// Paolo Lucchesi - Sat 03 Aug 2019 12:33:20 PM CEST
-#ifndef __PACKET_LAYER_H
-#define __PACKET_LAYER_H
+#ifndef __PACKET_MODULE_H
+#define __PACKET_MODULE_H
 #include <stdint.h>
-#include <stddef.h> // offsetof macro
 #include "crc.h"
 
 // Packet hardcoded properties and parameters
@@ -27,7 +25,6 @@ typedef enum PACKET_TYPE_E {
 } packet_type_t;
 
 // Packet type definition
-typedef uint16_t packet_header_t;
 typedef struct _packet_s {
   uint8_t header[PACKET_HEADER_SIZE];
     //unsigned type      : 4;
@@ -89,4 +86,4 @@ uint8_t packet_data_size(const packet_t*);
 void packet_print(const packet_t*);
 #endif
 
-#endif    // __PACKET_LAYER_H
+#endif  // __PACKET_MODULE_H

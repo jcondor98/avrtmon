@@ -1,6 +1,6 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Command interface - Command: echo
-// Paolo Lucchesi - Wed 27 Nov 2019 09:33:07 PM CET
+#include <stddef.h>  // NULL
 #include "command.h"
 #include "communication.h"
 

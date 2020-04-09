@@ -1,8 +1,7 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // LM Sensor layer - Head file
-// Paolo Lucchesi - Sun 18 Aug 2019 05:28:53 PM CEST
-#ifndef __LM_SENSOR_LAYER_H
-#define __LM_SENSOR_LAYER_H
+#ifndef __LMSENSOR_MODULE_H
+#define __LMSENSOR_MODULE_H
 #include <stdint.h>
 
 // Configurable ADC analog pin used for the LM35
@@ -14,21 +13,9 @@ typedef enum ADC_PIN_E {
 // Initialize ADC and other required stuff
 void lm_init(uint8_t adc_pin);
 
-// Set/Clear ADC interrupt flag
-#define lm_sei() do { ADCSRA |=  (1 << ADIE); } while (0)
-#define lm_cli() do { ADCSRA &= ~(1 << ADIE); } while (0)
-
-// Start a conversion (and return 0)
-// If the ADC is busy, do not start the conversion and return 1
+// Start a conversion and enter in ADC Noise Reduction sleep mode until the
+// conversion completes
+// Returns the registered temperature, or 0 on failure
 uint8_t lm_convert(void);
 
-// Return 1 if there is an ongoing conversion, 0 otherwise
-uint8_t lm_ongoing(void);
-
-// Returns 1 if a registered temperature is available, 0 otherwise
-uint8_t lm_available(void);
-
-// Get the last registered temperature (as a raw tension converted by the ADC)
-uint16_t lm_getresult(void);
-
-#endif    // __LM_SENSOR_LAYER_H
+#endif  // __LMSENSOR_MODULE_H

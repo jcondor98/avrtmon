@@ -1,6 +1,5 @@
-// avrtmon
-// Ring Buffer data structure - Source file
-// Paolo Lucchesi - Unit test
+// AVR Temperature Monitor -- Paolo Lucchesi
+// Ring Buffer data structure - Test Unit
 #include "test_framework.h"
 #include "ringbuffer.h"
 

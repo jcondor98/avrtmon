@@ -1,6 +1,5 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Command interface - Single command template
-// Paolo Lucchesi - Wed 23 Oct 2019 04:56:11 PM CEST
 // The communication happens as follows:
 // 1] [HOST] <CMD> Request to download
 // 2] [AVR]  If next (or first) DB is not empty:
@@ -9,6 +8,7 @@
 //             <DAT> Send temperatures in data bursts (i.e. in bulk)
 // 4] [AVR]  If there is another DB, goto [2]
 // 5] [AVR]  <CTR> Piggyback CTR packet with no carried data means end of comm.
+#include <stddef.h>  // NULL
 #include "command.h"
 #include "temperature.h"
 #include "communication.h"

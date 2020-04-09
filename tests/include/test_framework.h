@@ -1,6 +1,5 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Test Framework - Head file
-// Paolo Lucchesi - Sat 24 Aug 2019 07:18:32 PM CEST
 #ifndef __TEST_FRAMEWORK_H
 #define __TEST_FRAMEWORK_H
 #include <stdio.h>

@@ -1,6 +1,5 @@
-// avrtmon
-// AVR-side Configuration - Unit Test
-// Paolo Lucchesi - Thu 05 Sep 2019 03:27:31 PM CEST
+// AVR Temperature Monitor -- Paolo Lucchesi
+// AVR-side Configuration - Test Unit
 // NOTE: The test configuration shall be located in resources/config/test.csv
 //   Do NOT change the test configuration!
 #include <assert.h>

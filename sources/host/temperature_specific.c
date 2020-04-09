@@ -1,6 +1,5 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Temperature database - Source file
-// Paolo Lucchesi - Wed 30 Oct 2019 12:24:53 AM CET
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

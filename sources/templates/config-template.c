@@ -1,14 +1,8 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // AVR-side Configuration - Source file
-// Paolo Lucchesi - Tue 27 Aug 2019 06:58:59 PM CEST
 #include <string.h> // memcpy
 #include <stddef.h> // offsetof
-
 #include "config.h"
-
-#ifdef AVR
-#include "nvm.h"
-#endif
 
 
 // Stuff common to host and AVR
@@ -32,6 +26,7 @@ uint8_t config_get_size(config_field_t field) {
 
 // AVR-side stuff
 #ifdef AVR
+#include "nvm.h"
 
 // Configuration data which lives in memory
 static config_t config;
@@ -116,8 +111,7 @@ int config_field_id(const char *desc, config_field_t *dest) {
 #endif  // AVR
 
 
-// The functions below shall be used only for testing
-#ifdef TEST
+#ifdef TEST // The functions below shall be used only for testing
 
 // Get the offset of a single field
 uint8_t config_get_offset(config_field_t field) {

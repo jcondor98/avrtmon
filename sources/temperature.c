@@ -1,6 +1,5 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Unified temperature interface - Source file
-// Paolo Lucchesi - Wed 25 Mar 2020 12:18:55 AM CET
 // The data structures is barely like this:
 // struct _temperature_db_info_s {
 //   temperature_id_t count;

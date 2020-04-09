@@ -1,8 +1,7 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Multi-threaded, lock-free ringbuffer data structure - Head file
-// Paolo Lucchesi - Mon 30 Dec 2019 03:00:30 AM CET
-#ifndef __RING_BUFFER_STRUCT_H
-#define __RING_BUFFER_STRUCT_H
+#ifndef __RINGBUFFER_STRUCT_H
+#define __RINGBUFFER_STRUCT_H
 #include <stddef.h>
 #include <pthread.h>
 
@@ -13,7 +12,7 @@ typedef struct _ringbuffer_s {
   pthread_mutex_t lock[1];
   size_t first;
   size_t last;
-  size_t size; // Maximum number of items + 1
+  size_t size;
   unsigned char full;
 } ringbuffer_t;
 
@@ -21,7 +20,7 @@ typedef struct _ringbuffer_s {
 ringbuffer_t *ringbuffer_new(size_t buf_size);
 
 // Delete a ringbuffer
-void ringbuffer_delete(ringbuffer_t *rb);
+void ringbuffer_delete(ringbuffer_t*);
 
 // Return the maximum number of items
 size_t ringbuffer_size(ringbuffer_t*);
@@ -51,4 +50,4 @@ void ringbuffer_flush(ringbuffer_t*);
 void ringbuffer_print(ringbuffer_t*);
 #endif
 
-#endif    // __RING_BUFFER_STRUCT_H
+#endif    // __RINGBUFFER_STRUCT_H

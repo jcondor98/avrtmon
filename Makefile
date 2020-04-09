@@ -1,8 +1,8 @@
 # avrtmon
 # Makefile
 # Uses the rules defined by Prof. Giorgio Grisetti in the file 'avr.mk'
-# Paolo Lucchesi - Tue 06 Aug 2019 02:27:30 AM CEST
-# Refer to files located under 'resources/gnu-make/' for further informations
+# Refer to files located under 'resources/gnu-make/' for architecture-specific
+# directives
 .POSIX:
 .SUFFIXES: # Reset all implicit rules
 
@@ -61,12 +61,10 @@ config-gen:
 # Test (from the PC's OS) a module of the project
 # Tests are done by performing:
 #   $(call host_test [additional compiler args])
-# The function expect to find a source file named 'tests/<test_name>.c'
+# The function expects to find a source file named 'tests/<test_name>.c'
 # You can also choose a test method defining the variable 'TEST_WITH' in your
 # shell. Supported option are none (i.e. execute as-is), 'gdb' and 'less'
-test_%: CFLAGS := $(TESTFLAGS) $(CFLAGS)
-
-NVM_TEST_SOURCES := tests/mock_nvm.c tests/nvm.c
+test-%: CFLAGS := $(TESTFLAGS) $(CFLAGS)
 
 # Generate a mock configuration for testing
 define test_config_gen =
@@ -79,49 +77,46 @@ define test_config_clean =
 	rm tests/{config.c,include/config.h,nvm.c}
 endef
 
-test_crc: $(addprefix $(OBJDIR)/, crc.o)
+test-crc: $(addprefix $(OBJDIR)/, crc.o)
 	$(call host_test)
 
-test_packet: $(addprefix $(OBJDIR)/, crc.o packet.o)
+test-packet: $(addprefix $(OBJDIR)/, crc.o packet.o)
 	$(call host_test)
 
-test_temperature:
+test-temperature:
+	make -s config-gen
+	$(call host_test, $(SRCDIR)/avr/temperature_specific.c $(SRCDIR)/temperature.c $(SRCDIR)/avr/nvm.c tests/mock_nvm.c)
+
+test-config:
 	$(call test_config_gen)
-	$(call host_test, $(SRCDIR)/avr/temperature.c $(NVM_TEST_SOURCES))
+	$(call host_test, tests/config.c tests/nvm.c tests/mock_nvm.c)
 	$(call test_config_clean)
 
-test_config:
-	$(call test_config_gen)
-	$(call host_test, tests/config.c $(NVM_TEST_SOURCES))
-	$(call test_config_clean)
-
-test_shell:
+test-shell:
 	$(call host_test, $(SRCDIR)/host/shell.c)
 
-test_list:
+test-list:
 	$(call host_test, $(SRCDIR)/host/list.c)
 
-test_ringbuffer:
+test-ringbuffer:
 	$(call host_test, $(SRCDIR)/avr/ringbuffer.c)
 
-test_meta:
+test-meta:
 	$(call host_test)
 
 # Perform all tests in a stroke
 test:
-	@make -s test_crc
-	@make -s test_packet
-	@make -s test_config
-	@make -s test_temperature
-	#@make -s test_shell
-	@make -s test_ringbuffer
-	@make -s test_list
+	@make -s test-crc
+	@make -s test-packet
+	@make -s test-config
+	@make -s test-temperature
+	@make -s test-ringbuffer
+	@make -s test-list
 
 
 # Standard make PHONY rules
-.PHONY:	clean all config_gen test
+.PHONY:	clean all config-gen test
 
 clean:	
 	rm -f $(OBJDIR)/../**/*.o $(BINS) tests/bin/* tests/{config.c,include/config.h} \
 	  target/{host,avr}/*
-

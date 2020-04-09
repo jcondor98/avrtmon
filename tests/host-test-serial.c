@@ -1,3 +1,5 @@
+// AVR Temperature Monitor -- Paolo Lucchesi
+// Serial module test unit - Host-side
 #include <stdio.h>
 #include <stdlib.h>
 

@@ -1,6 +1,5 @@
-// avrtmon
-// Buttons interface test unit
-// Paolo Lucchesi - Sun 29 Mar 2020 10:49:43 PM CEST
+// AVR Temperature Monitor -- Paolo Lucchesi
+// Buttons interface - Test Unit
 #include <stdio.h>
 #include <string.h>
 #include <util/delay.h>

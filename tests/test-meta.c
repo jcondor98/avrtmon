@@ -1,6 +1,5 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Test Unit on data structures metadata et similia - Host side
-// Paolo Lucchesi - Wed 18 Dec 2019 12:49:34 AM CET
 #include <stdio.h>
 #include <stddef.h>
 
@@ -9,7 +8,6 @@
 
 
 // For now, only packet and command structures are tested
-// TODO: Test other stuff
 int main(int argc, const char *argv[]) {
   puts("Metadata for data types test unit\n");
   // Test packet_t

@@ -1,13 +1,12 @@
-// avrtmon
-// Program shell (i.e. command line) - Source file
-// Paolo Lucchesi - Thu 31 Oct 2019 02:12:01 AM CET
+// AVR Temperature Monitor -- Paolo Lucchesi
+// Program shell - Head file
 #ifndef __SHELL_MODULE_H
 #define __SHELL_MODULE_H
 
 // Different types of commands, in order of descending priority
 // NOTE: CMD_TYPE_NONE must be the last value!
 typedef enum COMMAND_TYPE_T {
-  CMD_TYPE_ALL = 0, CMD_TYPE_BUILTIN, CMD_TYPE_EXTERNAL,CMD_TYPE_NONE
+  CMD_TYPE_ALL = 0, CMD_TYPE_BUILTIN, CMD_TYPE_EXTERNAL, CMD_TYPE_NONE
 } command_type_t;
 
 // Type definition for a shell command executor
@@ -31,19 +30,27 @@ typedef enum SHELL_FLAG_E {
   SH_EXIT_ON_ERR = 1 << 2
 } shell_flag_t;
 
+
 // Type definition for a shell
 typedef struct _shell_s {
-  char *prompt;
-  shell_command_t *commands;
+  char *prompt; // Printed at every non-script shell iteration
+
+  // Commands
   shell_command_t *builtins;
-  size_t commands_count;
+  shell_command_t *commands;
   size_t builtins_count;
-  void *storage;
-  struct { // TODO: Complete to make this a full interface
+  size_t commands_count;
+
+  void *storage; // Implementation dependent
+
+  // Operation table for command operations
+  // Other operations shall be added on any further needing
+  struct {
     int (*compare)(const void *cmd1, const void *cmd2);
     shell_command_t* (*get)(const struct _shell_s *shell,
         const char *name, unsigned char type);
   } command_ops;
+
   unsigned char flags;
 } shell_t;
 
@@ -95,9 +102,7 @@ int shell_execv(shell_t *shell, char *argv[]);
 } while (0)
 
 
-// [DEBUG] Print informations about a given shell
-#ifdef DEBUG
+// Print informations about a given shell
 void shell_print(const shell_t *shell);
-#endif
 
-#endif    // __SHELL_MODULE_H
+#endif  // __SHELL_MODULE_H

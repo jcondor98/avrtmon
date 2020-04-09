@@ -1,9 +1,8 @@
-// avrtmon
-// Linked List - Unit test
-// Paolo Lucchesi - Fri 01 Nov 2019 02:17:03 AM CET
+// AVR Temperature Monitor -- Paolo Lucchesi
+// Linked List - Test Unit
 #include <string.h>
-#include "include/test_framework.h"
-#include "host/list.h"
+#include "test_framework.h"
+#include "list.h"
 
 #define TEST_ITEMS_MAX 3  // Avoid long iterations for repetitive tests
 

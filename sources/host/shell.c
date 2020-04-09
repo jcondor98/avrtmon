@@ -1,13 +1,12 @@
-// avrtmon
-// Program shell (i.e. command line) - Source file
-// Paolo Lucchesi - Thu 31 Oct 2019 02:31:26 AM CET
+// AVR Temperature Monitor -- Paolo Lucchesi
+// Program shell - Source file
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 
-#include "host/shell.h"
-#include "host/debug.h"
+#include "shell.h"
+#include "debug.h"
 
 
 // Maximum length for a shell input line
@@ -124,7 +123,7 @@ static int _execute(shell_t *shell, int argc, char *argv[]) {
 // Returns the code returned by the executed command, or 127 if the command
 // does not exist
 static int _shell_exec(shell_t *shell, char *_line) {
-  if (!shell->command_ops.get) return 1; // TODO: Return something like SH_INTERNAL_ERROR
+  if (!shell->command_ops.get) return 0xFF; // TODO: Return something like SH_INTERNAL_ERROR
 
   // argv-like buffer for the processed input line
   char *argv[SHELL_LINE_MAX_LEN / 2 + 1];
@@ -158,7 +157,7 @@ int shell_exec(shell_t *shell, const char *line) {
 
 // Execute a shell command, argv-style
 int shell_execv(shell_t *shell, char *argv[]) {
-  if (!shell || !argv) return 0xFF; // TODO: Signal something like 'Shell internal error'
+  if (!shell || !argv) return 0xFF; // TODO: Return something like SH_INTERNAL_ERROR
   int argc = 0;
   while (argv[argc])
     ++argc;
@@ -245,8 +244,7 @@ static shell_command_t *shell_command_get(const shell_t *shell,
 }
 
 
-#ifdef DEBUG
-// [DEBUG] Print informations about a given shell
+// Print informations about a given shell
 void shell_print(const shell_t *shell) {
   puts("\nPrinting shell");
   if (!shell) {
@@ -266,4 +264,3 @@ void shell_print(const shell_t *shell) {
 
   putchar('\n');
 }
-#endif

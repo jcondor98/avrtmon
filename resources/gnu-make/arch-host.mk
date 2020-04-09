@@ -5,10 +5,14 @@
 # Host Compiler setup
 CC := gcc
 CFLAGS := -std=gnu99 -Wall -lrt -lpthread -I$(INCDIR)/host -I$(INCDIR) \
-  -funsigned-bitfields -fshort-enums
+  -funsigned-bitfields -fshort-enums -Wno-missing-braces
 TESTFLAGS := -Itests/include -I$(INCDIR)/avr -DAVR -DTEST -Wno-format
 NDEBUGFLAGS := -O2 -DNDEBUG
 DEBUGFLAGS := -O0 -ggdb -DDEBUG
+
+# Installation utilities
+INSTALL := cp -n
+CHMOD := chmod
 
 ifndef DEBUG
   CFLAGS += $(NDEBUGFLAGS)
@@ -18,10 +22,14 @@ endif
 
 TARGET := target/host/avrtmon
 $(TARGET): $(OBJECTS)
-	make -s config_gen
+	make -s config-gen
 	$(CC) $(CFLAGS) -o $@ $^
 
-resources/bin/crc_table_generator: resources/crc_table_generator.c $(OBJDIR)/crc.o
+install:
+	$(INSTALL) target/host/avrtmon /usr/bin/avrtmon
+	$(CHMOD) 0755 /usr/bin/avrtmon
+
+resources/bin/crc-table-generator: resources/crc-table-generator.c $(OBJDIR)/crc.o
 	$(CC) -O2 -I$(INCDIR) -o $@ $^
 
 
@@ -38,6 +46,11 @@ define host_test =
 	rm tests/bin/$@
 endef
 
-host_test_serial: $(OBJDIR)/ringbuffer.o $(OBJDIR)/serial.o
-	$(CC) $(CFLAGS) -o tests/bin/serial_host $^ tests/serial/host_test_serial.c
-	./tests/bin/serial_host
+
+host-test-%: CFLAGS += $(TESTFLAGS)
+
+host-test-serial: $(OBJDIR)/ringbuffer.o $(OBJDIR)/serial.o
+	$(call host_test)
+
+host-test-ringbuffer: $(OBJDIR)/ringbuffer.o
+	$(call host_test)

@@ -1,6 +1,5 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Debug and error handling facilities - Host side
-// Paolo Lucchesi - Fri 13 Mar 2020 03:17:00 PM CET
 #ifndef __DEBUG_H
 #define __DEBUG_H
 
@@ -17,5 +16,4 @@
 // Use as 'debug action' or 'debug { many actions }'
 #define debug if (DEBUG)
 
-#endif    // __DEBUG_H
-
+#endif  // __DEBUG_H

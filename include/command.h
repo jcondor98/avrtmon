@@ -1,14 +1,8 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Command interface - Head file
-// Paolo Lucchesi - Sun 06 Oct 2019 05:14:06 PM CEST
-#ifndef __COMMAND_INTERFACE_H
-#define __COMMAND_INTERFACE_H
+#ifndef __COMMAND_MODULE_H
+#define __COMMAND_MODULE_H
 #include "config.h"
-
-#ifdef AVR
-#include "communication.h"
-#endif
-
 
 // Command id data type definition
 // i.e. All the different executable commands
@@ -45,7 +39,9 @@ typedef struct _config_setter_s {
 
 typedef uint16_t command_download_arg_t;
 
-#ifdef AVR
+
+#ifdef AVR // AVR specific stuff
+#include "communication.h"
 
 // Command function to be executed as its "launcher"
 typedef uint8_t (*command_action_f)(const void *arg);
@@ -67,5 +63,6 @@ uint8_t command_start(command_id_t id, const void *arg);
 // Execute a single iteration of a command
 uint8_t command_iterate(command_id_t id, const void *arg);
 
-#endif    // AVR specific types and functions
-#endif    // __COMMAND_INTERFACE_H
+#endif  // AVR specific types and functions
+
+#endif  // __COMMAND_MODULE_H

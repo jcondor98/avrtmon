@@ -1,8 +1,7 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // Packet-switched communication layer - Head file
-// Paolo Lucchesi - Sat 03 Aug 2019 12:33:20 PM CEST
-#ifndef __CRC_H
-#define __CRC_H
+#ifndef __CRC_MODULE_H
+#define __CRC_MODULE_H
 #include <stdint.h>
 
 // CRC Algorithm parameters
@@ -31,4 +30,4 @@ crc_t crc(const void *data, uint8_t size);
 // smaller data type if only knowing if the message is corrupted is relevant
 crc_t crc_check(const void *data, uint8_t size);
 
-#endif    // __CRC_H
+#endif  // __CRC_MODULE_H

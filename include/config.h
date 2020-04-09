@@ -1,13 +1,12 @@
-// avrtmon
+// AVR Temperature Monitor -- Paolo Lucchesi
 // AVR-side Configuration - Head file
-// Paolo Lucchesi - Tue 27 Aug 2019 06:58:41 PM CEST
-#ifndef __CONFIGURATION_H
-#define __CONFIGURATION_H
+#ifndef __CONFIGURATION_MODULE_H
+#define __CONFIGURATION_MODULE_H
 #include <stdint.h>
 
 
 // Number of field present in the configuration
-#define CONFIG_FIELD_COUNT 6
+#define CONFIG_FIELD_COUNT 7
 
 // Identifiers for each configuration field
 typedef enum CONFIG_FIELD_E {
@@ -15,6 +14,7 @@ typedef enum CONFIG_FIELD_E {
   CFG_TEMPERATURE_TIMER_INTERVAL,
   CFG_LMSENSOR_PIN,
   CFG_BTN_DEBOUNCE_TIME,
+  CFG_POWEROFF_PIN,
   CFG_START_PIN,
   CFG_STOP_PIN
 } config_field_t;
@@ -25,6 +25,7 @@ typedef struct _config_s {
   uint16_t temperature_timer_interval;
   uint8_t lmsensor_pin;
   uint8_t btn_debounce_time;
+  uint8_t poweroff_pin;
   uint8_t start_pin;
   uint8_t stop_pin;
 } config_t;
@@ -87,4 +88,4 @@ uint8_t config_dump(void *dest);
 
 #endif  // TEST
 
-#endif    // __CONFIGURATION_H
+#endif  // __CONFIGURATION_MODULE_H

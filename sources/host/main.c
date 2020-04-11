@@ -78,8 +78,8 @@ int main(int argc, char *argv[]) {
   err_check_exit(!shell_storage, "Could not initialize shell storage");
 
   // Launch the program command line
-  shell_t *shell = shell_new("avrtmon> ", shell_commands, shell_commands_count,
-      shell_builtins, shell_builtins_count, shell_storage);
+  shell_t *shell = shell_new("avrtmon> ",
+      shell_commands, shell_commands_count, shell_storage);
   err_check_exit(!shell, "Could not initialize program shell");
   debug shell_print(shell);
 

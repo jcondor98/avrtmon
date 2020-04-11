@@ -17,13 +17,13 @@ typedef struct _cache_db_s {
 } cache_db_t;
 cache_db_t local_db, local_db_aux;
 
-
 // Room necessary for a DB with just one temperature
 #define TEMP_DB_MIN_SIZE (sizeof(temperature_db_t) + sizeof(temperature_t))
 
 // Get the address of an arbitrary field in an NVM, passing the field name
 #define NVM_ADDR_FIELD(db_nvm_addr, field) \
   (((void*) db_nvm_addr) + offsetof(temperature_db_t, field))
+
 
 // Auxiliary functions -- See at the bottom of this source file
 static inline void *_item_nvm_addr(void *db_nvm_addr, temperature_id_t t_id);
@@ -158,8 +158,7 @@ temperature_id_t temperature_count_all(void) {
       return count;
   }
 
-  count += local_db_aux.meta.used;
-  return count;
+  return count + local_db_aux.meta.used; // Last DB was not locked
 }
 
 
@@ -169,7 +168,7 @@ void temperature_db_reset(void) {
   uint16_t last_int = local_db.meta.reg_interval;
   local_db.nvm_addr = &nvm_image->db_seq;
   local_db.meta = (temperature_db_t) {
-    .reg_resolution = last_res, .reg_interval = last_int
+    .reg_resolution = last_res, .reg_interval = last_int, .used = 0, .locked = 0
   };
   _db_sync(&local_db);
 }

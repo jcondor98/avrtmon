@@ -5,6 +5,7 @@
 #include <avr/sleep.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
+#include "sleep_util.h"
 
 #include "temperature_daemon.h"
 #include "temperature.h"
@@ -18,7 +19,6 @@
 #include "led.h"
 
 #define POWER_ON_LED D22
-#define POWER_ACT_LED D23
 
 
 // Perform setup routine?
@@ -146,26 +146,13 @@ int main(void) {
 
     // Power-on application loop
     while (!perform_setup) {
-      act_perf += communication_handler();      // Check for incoming packets
-      act_perf += temperature_daemon_handler(); // Check for new temperatures
-      act_perf += button_handler();             // Check for user interaction
+      act_perf = 0;
+      act_perf |= communication_handler();      // Check for incoming packets
+      act_perf |= temperature_daemon_handler(); // Check for new temperatures
+      act_perf |= button_handler();             // Check for user interaction
 
       // Enter (interruptable) sleep mode if no action request was performed
-      cli();
-      if (!act_perf) {
-        // Set idle sleep mode (in the docs set_sleep_mode() is... ambiguous)
-        SMCR &= ~(1 << SM2 | 1 << SM1 | 1 << SM0);
-        led_off(POWER_ACT_LED);
-        sleep_enable();
-        sei();
-        sleep_cpu();
-        sleep_disable();
-        led_on(POWER_ACT_LED);
-      }
-      else {
-        --act_perf;
-        sei();
-      }
+      sleep_on(SLEEP_MODE_IDLE, !act_perf);
     }
   }
 }

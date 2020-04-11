@@ -60,8 +60,7 @@ typedef struct _shell_s {
 // The function will recreate a new commands array, so the one passed can be
 // deallocated without any wanted effect. Same thing will be done for 'prompt'
 shell_t *shell_new(const char *prompt, const shell_command_t *commands,
-    size_t commands_count, const shell_command_t *builtins,
-    size_t builtins_count, void *storage);
+    size_t commands_count, void *storage);
 
 // Delete a shell (along with all the memory objects it uses)
 void shell_delete(shell_t *shell);

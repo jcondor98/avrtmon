@@ -14,9 +14,8 @@
 #include "debug.h"
 
 
-// Declare a shell_storage_t/shell_t variable casted from an opaque pointer
+// Declare a shell_storage_t variable casted from an opaque pointer
 #define _storage_cast(st,opaque) shell_storage_t *st=(shell_storage_t*)(opaque)
-#define _shell_cast(sh,opaque) shell_t *sh=(shell_t*)(opaque)
 
 // Handier function to send and receive packets
 #define SERIAL_CTX (st->serial_ctx) // Must be the context in EVERY function below
@@ -70,18 +69,6 @@ void shell_cleanup(shell_t *s) {
   free(st);
 }
 
-
-
-// CMD: echo
-// Usage: echo [arg1 arg2 ...]
-// Print back the arguments given
-int echo(int argc, char *argv[], void *storage) {
-  for (int i=1; i < argc; ++i) {
-    fputs(argv[i], stdout);
-    putchar(i == argc-1 ? '\n' : ' ');
-  }
-  return 0;
-}
 
 
 // CMD: connect
@@ -149,22 +136,28 @@ int download(int argc, char *argv[], void *storage) {
   temperature_id_t db_size;
   temperature_db_t *db_current = NULL;
 
-  // Buffer to received packets
+  // Buffer and variables for received packets
   packet_t pack_rx[1];
+  unsigned char type, data_size;
 
 
   // Send a download command to the tmon
-  sh_error_on(pcmd(CMD_TEMPERATURES_DOWNLOAD, NULL, 0) != 0, 3,
-      "Could not send CMD packet");
-
-  // TODO: First packet must be a CTR one
+  if (pcmd(CMD_TEMPERATURES_DOWNLOAD, NULL, 0) != 0) {
+    list_delete(db_list, _temperature_db_item_destroyer);
+    sh_error(3, "Could not send CMD packet");
+  }
 
   // Main downloader loop
   while (1) {
-    precv(pack_rx);
-    unsigned char type = packet_get_type(pack_rx);
-    unsigned char data_size = packet_data_size(pack_rx);
+    // Receive new packet
+    if (precv(pack_rx) != 0) {
+      err_log("Unable to receive packet");
+      break;
+    }
+    type = packet_get_type(pack_rx);
+    data_size = packet_data_size(pack_rx);
 
+    // New database incoming
     if (type == PACKET_TYPE_CTR) {
       if (data_size == 0) { // No more data to receive
         if (list_size(db_list) == 0) // No temperatures were received
@@ -189,12 +182,25 @@ int download(int argc, char *argv[], void *storage) {
       else break; // Error: unexpected packet data size
     }
 
-    // New temperatures incoming -- TODO: Check DB size
+    // New temperatures incoming
     else if (type == PACKET_TYPE_DAT) {
+      const char *err_msg = NULL;
       const unsigned burst = data_size / sizeof(temperature_t);
       float converted[burst];
-      assert(burst != 0);
-      assert(db_current);
+
+      // Handle errors
+      if (!db_current)
+        err_msg = "NULL reference to current database";
+      else if (db_current->size < db_current->used + burst)
+        err_msg = "Too many temperatures received for this database";
+      else if (burst == 0)
+        err_msg = "Received DAT packet with no temperatures";
+      if (err_msg) {
+        err_log(err_msg);
+        break;
+      }
+
+      // No errors occurred
       for (size_t i=0; i < burst; ++i)
         converted[i] = temperature_raw2float(((uint16_t*) pack_rx->data)[i]);
       temperature_register_bulk(db_current, burst, converted);
@@ -206,7 +212,7 @@ int download(int argc, char *argv[], void *storage) {
 
   // Error handler
   list_delete(db_list, _temperature_db_item_destroyer);
-  sh_error(3, "Communication failure"); // Communication error
+  sh_error(3, "Unexpected communication failure");
 }
 
 
@@ -295,7 +301,8 @@ int tmon_config(int argc, char *argv[], void *storage) {
     char _f_setter[sizeof(config_setter_t) + f_size];  // Room for the setter
     config_setter_t *f_setter = (config_setter_t*) &_f_setter;
 
-    // Assign the value to the setter
+    // Assign ID and value to the setter
+    f_setter->id = f;
     switch (f_size) {
       case 1:
         *((uint8_t*) f_setter->value) = (uint8_t) value;
@@ -419,85 +426,6 @@ int export(int argc, char *argv[], void *storage) {
   return 0;
 }
 
-
-
-// Here starts "built-in" commands
-// TODO: Move to the shell module itself when a better way to handle commands
-// is implemented
-
-// CMD: help
-// Usage: help [command]
-// Display the entire command set, or a description of a specific command
-int help(int argc, char *argv[], void *env) {
-  _shell_cast(sh, env);
-
-  // Generic use of 'help'
-  if (argc == 1) {
-    printf("\nBuilt-in commands: %zu\n", sh->builtins_count);
-    for (size_t i=0; i < sh->builtins_count; ++i)
-      printf(" - %s\n", sh->builtins[i].name);
-    printf("\nExternal commands: %zu\n", sh->commands_count);
-    for (size_t i=0; i < sh->commands_count; ++i)
-      printf(" - %s\n", sh->commands[i].name);
-    putchar('\n');
-  }
-
-  // 'help' takes a command name as its sole argument
-  else if (argc == 2) {
-    // TODO: Handle NULL function
-    shell_command_t *cmd = sh->command_ops.get(sh, argv[1], CMD_TYPE_ALL);
-    if (cmd) {
-      if (cmd->help) puts(cmd->help);
-      else printf("No help for command %s\n", cmd->name);
-    }
-    else {
-      printf("Unknown command: %s\n", argv[1]);
-      return 2;
-    }
-  }
-
-  else return 1; // Unaccepted syntax
-  return 0; // Success
-}
-
-
-// CMD: exit
-// Exit from the shell
-int _sh_exit(int argc, char *argv[], void *env) {
-  _shell_cast(sh, env);
-  if (argc != 1) return 1;
-  shell_flag_set(sh, SH_SIG_EXIT);
-  return 0;
-}
-
-
-
-// Set of the builtin shell commands
-static shell_command_t _shell_builtins[] = {
-  (shell_command_t) { // CMD: echo
-    .name = "echo",
-    .help = "Usage: echo [arg1 arg2 ...]\n"
-      "Print back the arguments given",
-    .exec = echo
-  },
-
-  (shell_command_t) { // CMD: help
-    .name = "help",
-    .help = "Usage: help [command]\n"
-      "Display the entire command set, or a description of a specific command",
-    .exec = help
-  },
-
-  (shell_command_t) { // CMD: exit
-    .name = "exit",
-    .help = "Exit from the shell",
-    .exec = _sh_exit
-  }
-};
-
-// This is the exposed shell commands set
-shell_command_t *shell_builtins = _shell_builtins;
-size_t shell_builtins_count = sizeof(_shell_builtins) / sizeof(shell_command_t);
 
 
 // Set of all the shell commands

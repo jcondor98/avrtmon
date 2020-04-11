@@ -22,15 +22,19 @@ static int cmdcmp(const void *c1, const void *c2);
 static shell_command_t *shell_command_get(const shell_t *shell,
     const char *name, unsigned char type);
 
+// Shell built-in commands
+static shell_command_t _shell_builtins[];
+static size_t _shell_builtins_count;
+static unsigned char _shell_builtins_sorted;
+
 
 // Create a new shell object, given a prompt and and a command array
 // Returns a pointer to the new shell object on success, NULL otherwise
 // The function will recreate a new commands array, so the one passed can be
 // deallocated without any unwanted effect. Same thing will be done for 'prompt'
 shell_t *shell_new(const char *prompt, const shell_command_t *commands,
-    size_t commands_count, const shell_command_t *builtins,
-    size_t builtins_count, void *storage) {
-  if (!commands || !commands_count || !builtins || !builtins_count)
+    size_t commands_count, void *storage) {
+  if (!commands || !commands_count)
     return NULL;
 
   // Create a new shell memory object
@@ -43,9 +47,6 @@ shell_t *shell_new(const char *prompt, const shell_command_t *commands,
   shell->commands = malloc(commands_count * sizeof(shell_command_t));
   if (!shell->commands)
     goto handle_allocator_error;
-  shell->builtins = malloc(builtins_count * sizeof(shell_command_t));
-  if (!shell->builtins)
-    goto handle_allocator_error;
 
   // Take care of the command prompt
   shell->prompt = strdup(prompt ? prompt : default_prompt);
@@ -53,7 +54,7 @@ shell_t *shell_new(const char *prompt, const shell_command_t *commands,
     goto handle_allocator_error;
 
   shell->commands_count = commands_count;
-  shell->builtins_count = builtins_count;
+  shell->builtins_count = _shell_builtins_count;
   shell->storage = storage;
   shell->flags = 0;
   shell->command_ops.compare = cmdcmp;
@@ -61,11 +62,16 @@ shell_t *shell_new(const char *prompt, const shell_command_t *commands,
 
   // Sort the commands array
   memcpy(shell->commands, commands, commands_count * sizeof(shell_command_t));
-  memcpy(shell->builtins, builtins, builtins_count * sizeof(shell_command_t));
   qsort(shell->commands, commands_count, sizeof(shell_command_t),
       shell->command_ops.compare);
-  qsort(shell->builtins, builtins_count, sizeof(shell_command_t),
-      shell->command_ops.compare);
+
+  // Assign and, if required, sort the builtins array
+  shell->builtins = _shell_builtins;
+  if (!_shell_builtins_sorted) {
+    qsort(shell->builtins, shell->builtins_count, sizeof(shell_command_t),
+        shell->command_ops.compare);
+    _shell_builtins_sorted = 1;
+  }
 
   return shell;
 
@@ -74,7 +80,6 @@ handle_allocator_error:
   if (shell) {
     if (shell->prompt)   free(shell->prompt);
     if (shell->commands) free(shell->commands);
-    if (shell->builtins) free(shell->builtins);
     free(shell);
   }
 
@@ -86,7 +91,6 @@ handle_allocator_error:
 void shell_delete(shell_t *shell) {
   if (!shell) return;
   free(shell->commands);
-  free(shell->builtins);
   free(shell->prompt);
   free(shell);
 }
@@ -264,3 +268,90 @@ void shell_print(const shell_t *shell) {
 
   putchar('\n');
 }
+
+
+
+// Built-in shell commands
+
+// CMD: help
+// Usage: help [command]
+// Display the entire command set, or a description of a specific command
+int _builtin_help(int argc, char *argv[], void *env) {
+  shell_t *sh = env;
+
+  // Generic use of 'help'
+  if (argc == 1) {
+    printf("\nBuilt-in commands: %zu\n", sh->builtins_count);
+    for (size_t i=0; i < sh->builtins_count; ++i)
+      printf(" - %s\n", sh->builtins[i].name);
+    printf("\nExternal commands: %zu\n", sh->commands_count);
+    for (size_t i=0; i < sh->commands_count; ++i)
+      printf(" - %s\n", sh->commands[i].name);
+    putchar('\n');
+  }
+
+  // 'help' takes a command name as its sole argument
+  else if (argc == 2) {
+    // TODO: Handle NULL function
+    shell_command_t *cmd = sh->command_ops.get(sh, argv[1], CMD_TYPE_ALL);
+    if (cmd) {
+      if (cmd->help) puts(cmd->help);
+      else printf("No help for command %s\n", cmd->name);
+    }
+    else {
+      printf("Unknown command: %s\n", argv[1]);
+      return 2;
+    }
+  }
+
+  else return 1; // Unaccepted syntax
+  return 0; // Success
+}
+
+
+// CMD: exit
+// Exit from the shell
+int _builtin_exit(int argc, char *argv[], void *env) {
+  shell_t *sh = env;
+  if (argc != 1) return 1;
+  shell_flag_set(sh, SH_SIG_EXIT);
+  return 0;
+}
+
+
+// CMD: echo
+// Usage: echo [arg1 arg2 ...]
+// Print back the arguments given
+int _builtin_echo(int argc, char *argv[], void *env) {
+  for (int i=1; i < argc; ++i) {
+    fputs(argv[i], stdout);
+    putchar(i == argc-1 ? '\n' : ' ');
+  }
+  return 0;
+}
+
+
+// Set of the builtin shell commands
+static shell_command_t _shell_builtins[] = {
+  (shell_command_t) { // CMD: echo
+    .name = "echo",
+    .help = "Usage: echo [arg1 arg2 ...]\n"
+      "Print back the arguments given",
+    .exec = _builtin_echo
+  },
+
+  (shell_command_t) { // CMD: help
+    .name = "help",
+    .help = "Usage: help [command]\n"
+      "Display the entire command set, or a description of a specific command",
+    .exec = _builtin_help
+  },
+
+  (shell_command_t) { // CMD: exit
+    .name = "exit",
+    .help = "Exit from the shell",
+    .exec = _builtin_exit
+  }
+};
+
+static size_t _shell_builtins_count = sizeof(_shell_builtins) / sizeof(shell_command_t);

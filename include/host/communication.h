@@ -7,7 +7,7 @@
 #include "command.h"
 
 // RTO value in milliseconds
-#define RTO_VALUE_MSEC 500
+#define RTO_VALUE_MSEC 150
 
 // Number of maximum attempts to send/receive a single packet
 #define MAXIMUM_SEND_ATTEMPTS 3

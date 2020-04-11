@@ -48,8 +48,11 @@ static uint8_t _change_current_db(uint8_t db_id) {
 
 // Single command iteration of the temperature uploader
 static uint8_t _iterate(const void *arg) {
-  if (temp_idx == temp_count && _change_current_db(temp_db_id+1) != 0)
-    return CMD_RET_FINISHED;
+  if (temp_idx == temp_count) {
+    if (_change_current_db(temp_db_id + 1) != 0)
+      return CMD_RET_FINISHED;
+    else return CMD_RET_ONGOING;
+  }
 
   temperature_id_t to_get = MIN(temp_count-temp_idx, TEMP_BURST);
   temperature_get_bulk(temp_db_id, temp_idx, to_get, temp_buf);
@@ -62,9 +65,7 @@ static uint8_t _iterate(const void *arg) {
 
 // Command starter
 static uint8_t _start(const void *arg) {
-  if (_change_current_db(0) != 0)
-    return CMD_RET_FINISHED;
-  return CMD_RET_ONGOING;
+  return (_change_current_db(0) != 0) ? CMD_RET_FINISHED : CMD_RET_ONGOING;
 }
 
 

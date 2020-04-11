@@ -11,7 +11,7 @@ NDEBUGFLAGS := -O2 -DNDEBUG
 DEBUGFLAGS := -O0 -ggdb -DDEBUG
 
 # Installation utilities
-INSTALL := cp -n
+INSTALL := cp
 CHMOD := chmod
 
 ifndef DEBUG
@@ -25,7 +25,7 @@ $(TARGET): $(OBJECTS)
 	make -s config-gen
 	$(CC) $(CFLAGS) -o $@ $^
 
-install:
+install-host:
 	$(INSTALL) target/host/avrtmon /usr/bin/avrtmon
 	$(CHMOD) 0755 /usr/bin/avrtmon
 

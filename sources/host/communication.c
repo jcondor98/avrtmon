@@ -27,18 +27,15 @@ typedef struct _timer_entity_s {
 // The RTO timer itself
 static timer_entity_t rto_timer;
 
-// Keep track of the current expected packet ID
-static unsigned char packet_global_id;
-
-
 // Timer functions -- Source at the bottom of this source file
 static inline int  rto_timer_init(void);
 static inline void rto_timer_destroy(void);
 static void rto_timer_start(void);
 static void rto_timer_stop(void);
 
-// Attempt to receive a packet
-static unsigned char _recv_attempt(serial_context_t *ctx, packet_t *p);
+
+// Keep track of the current expected packet ID
+static unsigned char packet_global_id;
 
 
 // Initialize the communication module -- In practice, init the RTO timer
@@ -56,6 +53,41 @@ void communication_cleanup(void) {
 int communication_connect(serial_context_t *ctx) {
   packet_global_id = 0;
   return (communication_craft_and_send(ctx, PACKET_TYPE_HND, NULL, 0) != 0) ? 1 : 0;
+}
+
+
+// Attempt to receive a packet
+// Return an appropriate error code (E_SUCCESS on success)
+static unsigned char _recv_attempt(serial_context_t *ctx, packet_t *p) {
+  static const struct timespec poll_tm = { 0, ONE_MSEC * 2 };
+  unsigned char *p_raw = (unsigned char*) p;
+  unsigned char id, size=0, received=0;
+
+  while (1) {
+    if (rto_timer.elapsed) return E_TIMEOUT_ELAPSED;
+
+    if (!serial_rx_getchar(ctx, p_raw + received))
+      nanosleep(&poll_tm, NULL); // Wait a while for characters
+    else switch (++received) { // Received i-th byte
+
+      case 1:
+        // Early fail on mismatching ID
+        id = packet_get_id(p);
+        if (id != packet_global_id) return E_ID_MISMATCH;
+        break;
+
+      case 2:
+        // Check packet header integrity
+        if (packet_check_header(p) != 0) return E_CORRUPTED_HEADER;
+        size = packet_get_size(p);
+        break;
+
+      default:
+        if (received >= size) // Last byte
+          return (packet_check_crc(p) != 0) ? E_CORRUPTED_CHECKSUM : E_SUCCESS;
+        break;
+    }
+  }
 }
 
 
@@ -103,10 +135,16 @@ int communication_send(serial_context_t *ctx, const packet_t *p) {
       debug err_log("Packet succesfully sent");
       return 0;
     }
+
+    // Could not receive a consistent response
+    else if (ret != E_TIMEOUT_ELAPSED)
+      while (!rto_timer.elapsed)
+        pause();
   }
 
   debug err_log("Too many consecutive failures");
-  return 1; // Too many consecutive failures
+  packet_global_id = 0;
+  return 1;
 }
 
 
@@ -135,22 +173,27 @@ int communication_recv(serial_context_t *ctx, packet_t *p) {
         }
         return 0;
 
+      case E_TIMEOUT_ELAPSED:
+        debug err_log("Attempt %d failed: timeout elapsed", attempt + 1);
+        break;
+
+      case E_ID_MISMATCH:
       case E_CORRUPTED_HEADER:
       case E_CORRUPTED_CHECKSUM:
         packet_err(p, response);
         serial_tx(ctx, response, PACKET_MIN_SIZE);
-        rto_timer_stop();
+        while (!rto_timer.elapsed)
+          pause();
         debug err_log("Attempt %d failed: corrupted packet", attempt + 1);
         break;
 
-      // Discard on RTO timeout or mismatching ID
-      default:
-        debug err_log("Attempt %d failed: RTO timeout or id mismatch", attempt + 1);
-        break;
+      default: break;
     }
   }
 
-  return 1; // Too many consecutive failures
+  debug err_log("Too many consecutive failures");
+  packet_global_id = 0;
+  return 1;
 }
 
 
@@ -182,41 +225,6 @@ int communication_cmd(serial_context_t *ctx, command_id_t cmd,
 
   return communication_craft_and_send(ctx, PACKET_TYPE_CMD, _payload,
       sizeof(command_id_t) + arg_size);
-}
-
-
-// Attempt to receive a packet
-// Return an appropriate error code (E_SUCCESS on success)
-static unsigned char _recv_attempt(serial_context_t *ctx, packet_t *p) {
-  unsigned char *p_raw = (unsigned char*) p;
-  unsigned char id, size=0, received=0;
-
-  while (1) {
-    if (rto_timer.elapsed) return E_TIMEOUT_ELAPSED;
-
-    if (!serial_rx_getchar(ctx, p_raw + received))
-      continue;
-
-    switch (++received) { // Received i-th byte
-
-      case 1:
-        // Early fail on mismatching ID
-        id = packet_get_id(p);
-        if (id != packet_global_id) return E_ID_MISMATCH;
-        break;
-
-      case 2:
-        // Check packet header integrity
-        if (packet_check_header(p) != 0) return E_CORRUPTED_HEADER;
-        size = packet_get_size(p);
-        break;
-
-      default:
-        if (received >= size) // Last byte
-          return (packet_check_crc(p) != 0) ? E_CORRUPTED_CHECKSUM : E_SUCCESS;
-        break;
-    }
-  }
 }
 
 

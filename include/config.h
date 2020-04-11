@@ -9,7 +9,7 @@
 #define CONFIG_FIELD_COUNT 7
 
 // Identifiers for each configuration field
-typedef enum CONFIG_FIELD_E {
+enum CONFIG_FIELD_E {
   CFG_TEMPERATURE_TIMER_RESOLUTION,
   CFG_TEMPERATURE_TIMER_INTERVAL,
   CFG_LMSENSOR_PIN,
@@ -17,7 +17,9 @@ typedef enum CONFIG_FIELD_E {
   CFG_POWEROFF_PIN,
   CFG_START_PIN,
   CFG_STOP_PIN
-} config_field_t;
+};
+
+typedef uint8_t config_field_t;
 
 // Type definition for the entire configuration
 typedef struct _config_s {

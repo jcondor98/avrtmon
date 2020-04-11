@@ -1,10 +1,10 @@
 // AVR Temperature Monitor -- Paolo Lucchesi
 // Communication handler - Source File
-// TODO: Find a way to correctly discard packets (e.g. flush the serial buffer
-// and wait a while)
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/sleep.h>
 #include <stddef.h>
+#include "sleep_util.h"
 
 #include "communication.h"
 #include "command.h"
@@ -20,8 +20,8 @@
 static uint8_t packet_global_id;
 
 
-// Scaled timer variables for RTO
-static const uint16_t rto = 500; // RTO in milliseconds
+// RTO variables
+static const uint16_t rto = 150; // RTO in milliseconds
 static volatile uint8_t rto_elapsed; // 1 if it is elapsed, 0 if not
 static volatile uint8_t rto_ongoing;
 
@@ -36,7 +36,7 @@ static inline void rto_timer_start(void) {
   if (rto_ongoing) rto_timer_stop();
   rto_ongoing = 1;
   rto_elapsed = 0;
-  //TCNT3 = 0; // Reset timer counter
+  TCNT3 = 0; // Reset timer counter
   TIMSK3 |= (1 << OCIE3A); // Enable timer interrupt
 }
 
@@ -119,7 +119,6 @@ static uint8_t _recv_attempt(packet_t *p) {
 
 // Get an incoming packet if data is available on the serial port (blocking)
 // Returns 0 on success, 1 on failure
-// TODO: Handle lost ACK (i.e. host retransmits packet)
 uint8_t communication_recv(packet_t *p) {
   static packet_t response[1];
 
@@ -127,29 +126,33 @@ uint8_t communication_recv(packet_t *p) {
     rto_timer_start();
     uint8_t ret = _recv_attempt(p);
 
-    switch (ret) {
+    if (ret == E_SUCCESS) {
+      packet_ack(p, response);
+      serial_tx(response, PACKET_MIN_SIZE);
+      rto_timer_stop();
+      if (packet_get_type(p) == PACKET_TYPE_HND)
+        packet_global_id = 1;
+      else packet_global_id = packet_next_id(packet_global_id);
+      return 0;
+    }
 
-      case E_SUCCESS:
-        packet_ack(p, response);
-        serial_tx(response, PACKET_MIN_SIZE);
-        rto_timer_stop();
-        if (packet_get_type(p) == PACKET_TYPE_HND)
-          packet_global_id = 1;
-        else packet_global_id = packet_next_id(packet_global_id);
-        return 0;
+    else if (ret == E_TIMEOUT_ELAPSED)
+      continue;
 
-      case E_CORRUPTED_HEADER:
-      case E_CORRUPTED_CHECKSUM:
-        packet_err(p, response);
-        serial_tx(response, PACKET_MIN_SIZE);
-        //serial_rx_reset(); // Discard remaining data to process (TODO)
-        rto_timer_stop();
-        break;
+    // Single recv failure
+    // Send ERR packet
+    packet_err(p, response);
+    serial_tx(response, PACKET_MIN_SIZE);
 
-      default: break; // Discard on RTO timeout or mismatching ID
+    // Wait and discard data until RTO elapses
+    while (1) {
+      serial_rx_reset();
+      sleep_on(SLEEP_MODE_IDLE, !rto_elapsed);
+      if (rto_elapsed) break;
     }
   }
 
+  packet_global_id = 0;
   return 1; // Too many consecutive failures
 }
 
@@ -174,14 +177,18 @@ uint8_t communication_send(const packet_t *p) {
     // TODO: Assert correct ID
     static packet_t response[1];
     uint8_t ret = _recv_attempt(response);
-    if (rto_ongoing) rto_timer_stop();
+
     if (ret == E_SUCCESS && packet_get_type(response) == PACKET_TYPE_ACK) {
+      rto_timer_stop();
       packet_global_id = packet_next_id(packet_global_id);
       command_notified = 1;
       return 0;
     }
+    else if (ret != E_TIMEOUT_ELAPSED)
+      sleep_while(SLEEP_MODE_IDLE, !rto_elapsed);
   }
 
+  packet_global_id = 0;
   return 1; // Too many consecutive failures
 }
 

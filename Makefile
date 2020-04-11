@@ -52,6 +52,9 @@ all: $(TARGET) ;
 host:
 	@ARCH=host make
 
+install:
+	@ARCH=host make install-host
+
 
 # Generate the configuration sources
 config-gen:

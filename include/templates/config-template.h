@@ -9,9 +9,11 @@
 //FIELD-COUNT-SUBST-HERE
 
 // Identifiers for each configuration field
-typedef enum CONFIG_FIELD_E {
+enum CONFIG_FIELD_E {
 //FIELD-ENUM-SUBST-HERE
-} config_field_t;
+};
+
+typedef uint8_t config_field_t;
 
 // Type definition for the entire configuration
 typedef struct _config_s {

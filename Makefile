@@ -47,13 +47,32 @@ $(OBJDIR)/%.o:	%.s
 	$(AS) $(ASFLAGS) -c -o $@ $<
 
 
-all: $(TARGET) ;
+target: $(TARGET) ;
+
+all:
+	@make host
+	@make avr
+
+avr:
+	@ARCH=avr make target
 
 host:
-	@ARCH=host make
+	@ARCH=host make target
+
+flash:
+	@ARCH=avr make target/avr/avrtmon.hex
 
 install:
-	@ARCH=host make install-host
+	install -m 0755 target/host/avrtmon /usr/bin/avrtmon
+	strip /usr/bin/avrtmon
+
+install-docs:
+	install -m 0644 resources/man/avrtmon.1.gz /usr/share/man/man1/
+
+docs: resources/man/avrtmon.1.gz ;
+
+resources/man/%.gz: resources/man/%.md
+	pandoc --standalone --to man $< | gzip --stdout - > $@
 
 
 # Generate the configuration sources
@@ -88,7 +107,8 @@ test-packet: $(addprefix $(OBJDIR)/, crc.o packet.o)
 
 test-temperature:
 	make -s config-gen
-	$(call host_test, $(SRCDIR)/avr/temperature_specific.c $(SRCDIR)/temperature.c $(SRCDIR)/avr/nvm.c tests/mock_nvm.c)
+	$(call host_test, $(SRCDIR)/avr/temperature_specific.c \
+	  $(SRCDIR)/temperature.c $(SRCDIR)/avr/nvm.c tests/mock_nvm.c)
 
 test-config:
 	$(call test_config_gen)
@@ -117,9 +137,9 @@ test:
 	@make -s test-list
 
 
-# Standard make PHONY rules
-.PHONY:	clean all config-gen test
-
 clean:	
 	rm -f $(OBJDIR)/../**/*.o $(BINS) tests/bin/* tests/{config.c,include/config.h} \
 	  target/{host,avr}/*
+
+
+.PHONY:	clean all config-gen test avr host flash install docs install-docs test-%

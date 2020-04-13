@@ -67,6 +67,19 @@ int list_remove(list_t*, size_t index, void **value);
 void list_concat(list_t *l1, list_t *l2);
 
 
+// List iterator type definition -- Does NOT require to be deallocated
+typedef list_node_t* list_iterator_t;
+
+// Create a new list iterator from a list
+list_iterator_t list_iterator_new(list_t *l);
+
+// Get the value of the node currently pointed by an iterator
+void *list_iterator_getvalue(list_iterator_t);
+
+// Shift iterator -- Functional
+list_iterator_t list_iterator_next(list_iterator_t);
+
+
 // Treat a list as a queue
 typedef list_t queue_t;
 #define queue_size(q) list_size(q)

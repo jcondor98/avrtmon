@@ -13,6 +13,10 @@ extern command_t *cmd_config_get_field;
 extern command_t *cmd_config_set_field;
 extern command_t *cmd_temperatures_download;
 extern command_t *cmd_temperatures_reset;
+extern command_t *cmd_set_resolution;
+extern command_t *cmd_set_interval;
+extern command_t *cmd_start;
+extern command_t *cmd_stop;
 extern command_t *cmd_echo;
 
 
@@ -49,5 +53,9 @@ void command_init(void) {
   cmd_table[CMD_CONFIG_SET_FIELD]      = cmd_config_set_field;
   cmd_table[CMD_TEMPERATURES_DOWNLOAD] = cmd_temperatures_download;
   cmd_table[CMD_TEMPERATURES_RESET]    = cmd_temperatures_reset;
+  cmd_table[CMD_SET_RESOLUTION]        = cmd_set_resolution;
+  cmd_table[CMD_SET_INTERVAL]          = cmd_set_interval;
+  cmd_table[CMD_START]                 = cmd_start;
+  cmd_table[CMD_STOP]                  = cmd_stop;
   cmd_table[CMD_ECHO]                  = cmd_echo;
 }

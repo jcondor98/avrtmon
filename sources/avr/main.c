@@ -18,8 +18,6 @@
 #include "buttons.h"
 #include "led.h"
 
-#define POWER_ON_LED D22
-
 
 // Perform setup routine?
 static uint8_t perform_setup = 1;
@@ -42,14 +40,10 @@ static inline void poweroff(uint8_t pressed) {
   led_off(POWER_ACT_LED);
 
   // Good night (go to sleep)
-  SMCR |= 1 << SM1;
-  SMCR &= ~(1 << SM2 | 1 << SM0);
-  sleep_enable();
-  sleep_cpu();
+  cli(); // No interrupts after waking up (sleep() sets interrupts to wake up)
+  sleep(SLEEP_MODE_PWR_DOWN);
 
   // Good morning (wake up)
-  sleep_disable();
-  cli(); // No interrupts while setting up again
   perform_setup = 1; // Repeat setup routine
 }
 

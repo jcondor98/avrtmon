@@ -1,5 +1,5 @@
 // AVR Temperature Monitor -- Paolo Lucchesi
-// Command interface - Single command template
+// AVR Command - temperatures_reset
 #include <stddef.h>  // NULL
 #include "command.h"
 #include "temperature.h"

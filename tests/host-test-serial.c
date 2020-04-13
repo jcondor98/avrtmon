@@ -7,7 +7,7 @@
 
 #define DEV_PATH "/dev/ttyACM0"
 #define READY_MSG "Ready to receive\n"
-#define BUF_SIZE 48
+#define BUF_SIZE 256
 
 
 int main(int argc, const char *argv[]) {
@@ -17,17 +17,14 @@ int main(int argc, const char *argv[]) {
     exit(EXIT_FAILURE);
   }
 
+  unsigned char buf_rx[BUF_SIZE];
   unsigned i;
 
-  /*
   // Receive ready message
   for (i=0; i < sizeof(READY_MSG) - 1; )
     if (serial_rx_getchar(ctx, buf_rx + i)) ++i;
   buf_rx[i] = '\0';
-  printf("[AVR] %s\n", buf_rx);
-  */
-
-  /* Version 2 */
+  printf("[AVR] %s\n", (char*) buf_rx);
 
   // Wait for a user NL to begin
   getchar();
@@ -48,25 +45,4 @@ int main(int argc, const char *argv[]) {
   putchar('\n');
   serial_close(ctx);
   exit(EXIT_SUCCESS);
-
-
-  /* Version 1 */
-
-  /*
-  char buf_rx[RX_BUF_SIZE];
-
-  // Send/receive the alphabet
-  i = 0;
-  for (char c='a'; c < 'z' + 1; ++c, ++i) {
-    write(ctx->dev_fd, &c, 1);
-    while (!serial_rx_getchar(ctx, buf_rx + i))
-      ;
-    //printf("Received: %c\n", buf_rx[i]);
-  }
-
-  serial_close(ctx);
-
-  buf_rx[i] = '\0';
-  printf("\n[AVR] %s\n\n", buf_rx);
-  */
 }

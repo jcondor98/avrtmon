@@ -7,8 +7,6 @@
 #include <avr/sleep.h>
 #include "led.h"
 
-#define POWER_ACT_LED D23
-
 #define sleep(mode) do {\
   uint8_t __sreg_bak = SREG;\
   set_sleep_mode(mode);\

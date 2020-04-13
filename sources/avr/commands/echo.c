@@ -1,10 +1,9 @@
 // AVR Temperature Monitor -- Paolo Lucchesi
-// Command interface - Command: echo
+// AVR Command - echo
 #include <stddef.h>  // NULL
 #include "command.h"
 #include "communication.h"
 
-// Command name
 #define COMMAND_NAME cmd_echo
 #define ARG_MAX_LEN (PACKET_DATA_MAX_SIZE - 2)
 

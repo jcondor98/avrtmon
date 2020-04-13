@@ -18,11 +18,7 @@ nvm_image_t NVMMEM _nvm_image = {
     .start_pin = D53,
     .stop_pin = D52
   },
-  // TODO: Make this dynamic (the setting below is a mere, temporary workaround)
-  .db_seq = (temperature_db_seq_t) {
-    .reg_resolution = 1000,
-    .reg_interval = 2
-  }
+  .db_seq = (temperature_db_seq_t) { 0 }
 };
 
 

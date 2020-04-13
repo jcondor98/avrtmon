@@ -10,26 +10,20 @@ TESTFLAGS := -Itests/include -I$(INCDIR)/avr -DAVR -DTEST -Wno-format
 NDEBUGFLAGS := -O2 -DNDEBUG
 DEBUGFLAGS := -O0 -ggdb -DDEBUG
 
-# Installation utilities
-INSTALL := cp
-CHMOD := chmod
-
 ifndef DEBUG
   CFLAGS += $(NDEBUGFLAGS)
 else
   CFLAGS += $(DEBUGFLAGS)
 endif
 
+
 TARGET := target/host/avrtmon
 $(TARGET): $(OBJECTS)
-	make -s config-gen
 	$(CC) $(CFLAGS) -o $@ $^
 
-install-host:
-	$(INSTALL) target/host/avrtmon /usr/bin/avrtmon
-	$(CHMOD) 0755 /usr/bin/avrtmon
 
-resources/bin/crc-table-generator: resources/crc-table-generator.c $(OBJDIR)/crc.o
+resources/bin/crc-table-generator: \
+  resources/crc-table-generator.c $(OBJDIR)/crc.o
 	$(CC) -O2 -I$(INCDIR) -o $@ $^
 
 
@@ -54,3 +48,6 @@ host-test-serial: $(OBJDIR)/ringbuffer.o $(OBJDIR)/serial.o
 
 host-test-ringbuffer: $(OBJDIR)/ringbuffer.o
 	$(call host_test)
+
+
+.PHONY: install-host install-docs host-test-%

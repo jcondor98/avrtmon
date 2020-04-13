@@ -252,6 +252,8 @@ int tmon_config(int argc, char *argv[], void *storage) {
   else if (strcmp(argv[1], "get") == 0) {
     if (argc != 3) return 1;
     config_field_t f;
+
+    sh_error_on(!SERIAL_CTX, 2, "tmon is not connected");
     sh_error_on(config_field_id(argv[2], &f) != 0, 2, "Invalid config field");
 
     // Send a CONFIG_GET_FIELD command to the tmon
@@ -261,6 +263,12 @@ int tmon_config(int argc, char *argv[], void *storage) {
     // Retrieve the field from the tmon
     packet_t pack_rx[1];
     sh_error_on(precv(pack_rx), 3, "Could not receive config field value");
+
+    unsigned char type = packet_get_type(pack_rx);
+    sh_error_on(type == PACKET_TYPE_CTR, 3,
+        "tmon did not recognize the choosen config fiels");
+    sh_error_on(type != PACKET_TYPE_DAT, 3,
+        "Unexpected response packet type");
 
     // Handle the received config field value
     // We assume that every config field is an integer
@@ -288,9 +296,9 @@ int tmon_config(int argc, char *argv[], void *storage) {
   // changed on other requirements (e.g. fields that are floats or structs)
   else if (strcmp(argv[1], "set") == 0) {
     if (argc != 4) return 1;
-
-    // Parse the config field to set
     config_field_t f;
+
+    sh_error_on(!SERIAL_CTX, 2, "tmon is not connected");
     sh_error_on(config_field_id(argv[2], &f) != 0, 2, "Invalid config field");
 
     // Parse the value for the configuration field
@@ -320,10 +328,72 @@ int tmon_config(int argc, char *argv[], void *storage) {
 
     // Send the proper CMD packet
     sh_error_on(pcmd(CMD_CONFIG_SET_FIELD, f_setter, sizeof(_f_setter)), 2,
-        "Could not send CMD packet with config setter");
+        "Could not send CMD packet");
   }
 
   else return 1;  // Unknown command, error
+  return 0;
+}
+
+
+// CMD: tmon-start
+// Usage: tmon-start
+// Start registering temperatures
+int tmon_start(int argc, char *argv[], void *storage) {
+  _storage_cast(st, storage);
+  if (argc != 1) return 1;
+  sh_error_on(!SERIAL_CTX, 2, "tmon is not connected");
+  sh_error_on(pcmd(CMD_START, NULL, 0) != 0, 3,
+      "Could not send CMD packet");
+  return 0;
+}
+
+
+// CMD: tmon-stop
+// Usage: tmon-stop
+// Stop registering temperatures
+int tmon_stop(int argc, char *argv[], void *storage) {
+  _storage_cast(st, storage);
+  if (argc != 1) return 1;
+  sh_error_on(!SERIAL_CTX, 2, "tmon is not connected");
+  sh_error_on(pcmd(CMD_STOP, NULL, 0) != 0, 3,
+      "Could not send CMD packet");
+  return 0;
+}
+
+
+
+// CMD: tmon-set-resolution
+// Usage: tmon-set-resolution <value>
+// Set the timer resolution for the next DB until the tmon is reset
+int tmon_set_resolution(int argc, char *argv[], void *storage) {
+  _storage_cast(st, storage);
+  if (argc != 2) return 1;
+  sh_error_on(!SERIAL_CTX, 2, "tmon is not connected");
+
+  uint16_t resolution = atoi(argv[1]);
+  sh_error_on(resolution == 0, 2, "Invalid resolution");
+
+  sh_error_on(pcmd(CMD_SET_RESOLUTION, &resolution, sizeof(uint16_t)) != 0, 3,
+      "Could not send CMD packet");
+  return 0;
+}
+
+
+
+// CMD: tmon-set-interval
+// Usage: tmon-set-interval <value>
+// Set the timer interval for the next DB until the tmon is reset
+int tmon_set_interval(int argc, char *argv[], void *storage) {
+  _storage_cast(st, storage);
+  if (argc != 2) return 1;
+  sh_error_on(!SERIAL_CTX, 2, "tmon is not connected");
+
+  uint16_t interval = atoi(argv[1]);
+  sh_error_on(interval == 0, 2, "Invalid interval");
+
+  sh_error_on(pcmd(CMD_SET_INTERVAL, &interval, sizeof(uint16_t)) != 0, 3,
+      "Could not send CMD packet");
   return 0;
 }
 
@@ -335,6 +405,8 @@ int tmon_echo(int argc, char *argv[], void *storage) {
   _storage_cast(st, storage);
   if (argc < 2) return 1;
   char str[PACKET_DATA_MAX_SIZE - 1];
+
+  sh_error_on(!SERIAL_CTX, 2, "tmon is not connected");
 
   // Reassemble the separated argv[] token into one string
   size_t str_len = 0;
@@ -381,21 +453,19 @@ int list(int argc, char *argv[], void *storage) {
   _storage_cast(st, storage);
   if (argc > 1) return 1;
 
-  size_t db_count = list_size(st->dbs);
-  printf("DBs present: %zu\n\n", db_count);
+  printf("DBs present: %zu\n\n", list_size(st->dbs));
 
   // Print databases metadata
-  // TODO: Improve performances using an iterator
-  for (size_t i=0; i < db_count; ++i) {
-    temperature_db_t *db;
-    sh_error_on(list_get(st->dbs, i, (void**) &db) != 0, 2,
-        "Error while fetching database of index %zu\n\n", i);
-    if (!db) fprintf(stderr, "Error: Database %zu is NULL\n", i);
+  list_iterator_t it = list_iterator_new(st->dbs);
+  while (it) {
+    temperature_db_t *db = list_iterator_getvalue(it);
+    if (!db) fprintf(stderr, "Error: NULL reference to database\n");
     else {
       printf("Database ID: %u\n", db->id);
       if (db->desc) printf("%s\n", db->desc);
       printf("Number of temperatures: %u\n\n", db->size);
     }
+    it = list_iterator_next(it);
   }
 
   return 0;
@@ -405,7 +475,7 @@ int list(int argc, char *argv[], void *storage) {
 // CMD: export
 // Usage: export <db_id> <output_filepath>
 // Export a database (as text, newline-separated float temperatures)
-// TODO: Make this reentrant (static variable emulates a closure)
+// TODO: Make this reentrant/thread-safe (static variable emulates a closure)
 static unsigned _db_id_to_find;
 static int _db_has_id(void *_db) {
   temperature_db_t *db = _db;
@@ -465,6 +535,34 @@ static shell_command_t _shell_commands[] = {
             "       tmon-config set <field> <value>\n"
             "Manipulate the tmon configuration",
     .exec = tmon_config
+  },
+
+  (shell_command_t) { // CMD: tmon-start
+    .name = "tmon-start",
+    .help = "Usage: tmon-start\n"
+      "Start registering temperatures",
+    .exec = tmon_start
+  },
+
+  (shell_command_t) { // CMD: tmon-stop
+    .name = "tmon-stop",
+    .help = "Usage: tmon-stop\n"
+      "Stop registering temperatures",
+    .exec = tmon_stop
+  },
+
+  (shell_command_t) { // CMD: tmon-set-resolution
+    .name = "tmon-set-resolution",
+    .help = "Usage: tmon-set-resolution <value>\n"
+      "Set the timer resolution for the next DB until the tmon is reset",
+    .exec = tmon_set_resolution
+  },
+
+  (shell_command_t) {
+    .name = "tmon-set-interval", // CMD: tmon-set-interval
+    .help = "Usage: tmon-set-interval <value>\n"
+      "Set the timer interval for the next DB until the tmon is reset",
+    .exec = tmon_set_interval
   },
 
   (shell_command_t) { // CMD: tmon-echo

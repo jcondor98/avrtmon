@@ -127,7 +127,8 @@ int temperature_db_export(const temperature_db_t *db, const char *fpath) {
   else fprintf(out, "%s\n", db->desc);
 
   // Compute time interval between temperature samples, in seconds
-  const double interval = (db->reg_resolution * db->reg_interval) / 1000;
+  printf("I-R: %hd %hd", db->reg_resolution, db->reg_interval);
+  const double interval = ((double) db->reg_resolution * (double) db->reg_interval) / 1000;
   
   // Write the temperatures
   for (unsigned i=0; i < db->size; ++i)

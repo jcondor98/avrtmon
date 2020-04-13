@@ -44,7 +44,6 @@ static inline uint8_t _btn_update(button_t *btn, uint8_t input) {
 
 
 // Debouncer ISR -- Timer 4 is used
-// TODO: Non-blocking
 ISR(TIMER4_COMPA_vect) {
   debouncing = 0;
 

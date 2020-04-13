@@ -185,7 +185,7 @@ static void *_serial_rx_task(void *arg) {
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 
     if (received < 0) perror(__func__);
-    else for (size_t i=0; i < received; ++i) { // TODO: Push in bulk
+    else for (size_t i=0; i < received; ++i) { // TODO: Optimize: Push in bulk
       unsigned char c = rx_inter_buf[i];
       ringbuffer_push(ctx->rx.buffer, c);
       //debug printf("[RX] Received byte: 0x%hhx\n", c);

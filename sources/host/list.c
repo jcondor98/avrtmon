@@ -174,6 +174,23 @@ void list_concat(list_t *l1, list_t *l2) {
 
 
 
+// Create a new list iterator from a list
+list_iterator_t list_iterator_new(list_t *l) {
+  return l ? l->head : NULL;
+}
+
+// Get the value of the node currently pointed by an iterator
+void *list_iterator_getvalue(list_iterator_t it) {
+  return it ? it->value : NULL;
+}
+
+// Shift iterator -- Functional
+list_iterator_t list_iterator_next(list_iterator_t it) {
+  return it ? it->next : NULL;
+}
+
+
+
 // [AUX] Create a new list node
 static inline list_node_t *list_node_new(void *value, list_node_t *next) {
   list_node_t *n = malloc(sizeof(list_node_t));

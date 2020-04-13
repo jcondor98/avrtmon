@@ -6,12 +6,16 @@
 
 // Command id data type definition
 // i.e. All the different executable commands
-#define COMMAND_COUNT 5
+#define COMMAND_COUNT 9
 typedef enum COMMAND_ID_E {
   CMD_CONFIG_GET_FIELD,
   CMD_CONFIG_SET_FIELD,
   CMD_TEMPERATURES_DOWNLOAD,
   CMD_TEMPERATURES_RESET,
+  CMD_SET_RESOLUTION,
+  CMD_SET_INTERVAL,
+  CMD_START,
+  CMD_STOP,
   CMD_ECHO
 } command_id_t;
 

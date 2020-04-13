@@ -1,0 +1,51 @@
+#!/bin/sh
+# avrtmon - Source dependency graph generator
+# This script generates a dependency graph for a list of C source files; the
+# graph can be shown with graphwiz
+# The script parses source files and considers as dependencies the head files
+# included with quotes, ignoring the ones included with angular brackets
+
+# Extract the name of a unit from its source file name
+function unit_name {
+  basename "$1" | sed -e 's/\.[ch]//g'
+}
+
+# Given a source file, print its dependencies
+function unit_deps {
+  local unit="$(unit_name $1)"
+  for depfile in $(cat $1 | grep '#include "' | cut -d '"' -f 2); do
+    local dep="$(unit_name $depfile)"
+    [ "$dep" != "$unit" ] && echo $dep
+  done
+}
+
+function usage {
+  cat << EOF
+Usage: $(basename $0) <output-pdf-file> <space separated source files>
+EOF
+}
+
+function exit_error {
+  usage
+  exit $1
+}
+
+
+# Prepare command line arguments
+[ $# -le 1 ] && exit_error 1
+OUTFILE="$1"
+shift 2
+
+# Generate graph
+( echo 'digraph {'
+  echo 'node [shape=box];'
+  for f in $@; do
+    unit="$(unit_name $f)"
+    if [ "$unit" != "main" ]; then
+      for dep in $(unit_deps $f); do
+        echo "\"$unit\" -> \"$dep\";"
+      done
+    fi
+  done
+  echo '}'
+) | dot -T pdf -o $OUTFILE

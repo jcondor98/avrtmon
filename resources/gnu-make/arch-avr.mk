@@ -18,16 +18,17 @@ AVRDUDE := avrdude
 AVRDUDE_PORT := /dev/ttyACM0    # programmer connected to serial device
 AVRDUDE_CONFIG != find /usr/share/arduino/hardware -name avrdude.conf
 
-AVRDUDE_FLAGS := -p m2560 -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROGRAMMER) -b 115200
-AVRDUDE_FLAGS += $(AVRDUDE_NO_VERIFY)
-AVRDUDE_FLAGS += $(AVRDUDE_VERBOSE)
-AVRDUDE_FLAGS += $(AVRDUDE_ERASE_COUNTER)
-AVRDUDE_FLAGS += -D -q -V -C $(AVRDUDE_CONFIG)
-AVRDUDE_FLAGS += -c wiring
+AVRDUDE_FLAGS := -p m2560 -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROGRAMMER) -b \
+  115200 $(AVRDUDE_NO_VERIFY) $(AVRDUDE_VERBOSE) $(AVRDUDE_ERASE_COUNTER) \
+  -D -q -V -C $(AVRDUDE_CONFIG) -c wiring
 
 # Use these as functions
 avrdude_write_flash = -U flash:w:$(strip $(1)):i
 avrdude_write_eeprom = -U eeprom:w:$(strip $(1)):i
+
+# LED preprocessor macros
+CFLAGS += -DPOWER_ON_LED=D22 -DTEMPERATURE_REGISTERING_LED=D24 \
+		  -DPOWER_ACT_LED=D26
 
 
 %.eep:	%.elf
@@ -40,14 +41,12 @@ avrdude_write_eeprom = -U eeprom:w:$(strip $(1)):i
 	$(AVRDUDE) $(AVRDUDE_FLAGS) $(call avrdude_write_flash, $@) \
 	  $(call avrdude_write_eeprom, $(patsubst %.hex, %.eep, $@))
 
-flash:
-	make target/avr/avrtmon.hex
-
 
 # AVR-specific binaries recipes
 avr-test-%: target/avr/test-%.hex ;
 
-target/avr/avrtmon.elf:	$(OBJECTS)
+TARGET := target/avr/avrtmon.elf
+$(TARGET):	$(OBJECTS)
 	$(CC) $(CFLAGS) -o $@ $^
 
 target/avr/test-serial.elf: tests/serial/avr-test-serial.c \
@@ -71,4 +70,4 @@ target/avr/test-nvm.elf: tests/avr-test-nvm.c \
 	$(CC) $(CFLAGS) -o $@ $^
 
 
-TARGET := target/avr/avrtmon.elf
+.PHONY: avr-test-%

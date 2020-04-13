@@ -4,13 +4,14 @@
 // alphabet, and sends back those letters in uppercase.
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/sleep.h>
 #include <util/delay.h>
 #include "serial.h"
 
 #define D13_MASK (1 << 7)
 #define READY_MSG "Ready to receive\n"
 
-#define BUF_RX_SIZE 52
+#define BUF_RX_SIZE 256
 volatile uint8_t buf_rx[BUF_RX_SIZE];
 uint8_t buf_tx[1];
 
@@ -20,15 +21,10 @@ int main(int argc, const char *argv[]) {
   DDRB |= D13_MASK;
   sei();
 
-  /*
   // Send READY_MSG without trailing '\0'
   serial_tx(READY_MSG, sizeof(READY_MSG) - 1);
   while (serial_tx_ongoing())
     ;
-  */
-
-
-  /* Version 2 */
 
   // Receive start byte (every byte will do)
   while (!serial_rx_getchar(buf_rx)) ;
@@ -50,34 +46,9 @@ int main(int argc, const char *argv[]) {
   // Transmit 'sent'
   while (serial_tx(&sent, 2) != 0) ;
 
-  while (1) ;
-
-  /* Version 1 */
-
-  /*
-  uint8_t chars[26];
-  for (uint8_t i=0; i < 26; ++i)
-    chars[i] = i + 0x41;  // All capital letters from 'A' to 'Z'
-
-  while (1) {
-    PORTB = D13_MASK;
-
-    for (uint8_t i=0; i < BUF_RX_SIZE; ) {
-      if (!serial_rx_available()) {
-        _delay_ms(500);
-        continue;
-      }
-
-      serial_rx_getchar(buf_rx + i);
-      buf_tx[0] = chars[(buf_rx[i] - 0x61) % 26];
-      serial_tx(buf_tx, 1);
-      while (serial_tx_ongoing())
-        ;
-      ++i;
-    }
-
-    PORTB = 0;
-    _delay_ms(2000);
-  }
-  */
+  // Wait for AVR board physical reset
+  set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+  sleep_enable();
+  while (1)
+    sleep_cpu();
 }

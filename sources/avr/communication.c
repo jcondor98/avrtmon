@@ -174,7 +174,6 @@ uint8_t communication_send(const packet_t *p) {
     // Attempt to receive ACK/ERR
     // Assertion on ACK/ERR id is made inside the receive attempt function
     // If any packet different from an ACK one is received, take it as a failure
-    // TODO: Assert correct ID
     static packet_t response[1];
     uint8_t ret = _recv_attempt(response);
 

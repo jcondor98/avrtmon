@@ -36,47 +36,47 @@ shell_t *shell_new(const char *prompt, const shell_command_t *commands,
     size_t commands_count, void *storage) {
   if (!commands || !commands_count)
     return NULL;
+  shell_t *shell;
 
-  // Create a new shell memory object
-  shell_t *shell = malloc(sizeof(shell_t));
-  if (!shell)
-    goto handle_allocator_error;
-  *shell = (shell_t) { 0 };
+  do { // Break on error
+    // Create a new shell memory object
+    if (! (shell = malloc(sizeof(shell_t))))
+      break;
+    *shell = (shell_t) { 0 };
 
-  // Allocate the commands and builtins array
-  shell->commands = malloc(commands_count * sizeof(shell_command_t));
-  if (!shell->commands)
-    goto handle_allocator_error;
+    // Allocate the commands and builtins array
+    shell->commands = malloc(commands_count * sizeof(shell_command_t));
+    if (!shell->commands) break;
 
-  // Take care of the command prompt
-  shell->prompt = strdup(prompt ? prompt : default_prompt);
-  if (!shell->prompt)
-    goto handle_allocator_error;
+    // Take care of the command prompt
+    shell->prompt = strdup(prompt ? prompt : default_prompt);
+    if (!shell->prompt) break;
 
-  shell->commands_count = commands_count;
-  shell->builtins_count = _shell_builtins_count;
-  shell->storage = storage;
-  shell->flags = 0;
-  shell->command_ops.compare = cmdcmp;
-  shell->command_ops.get = shell_command_get;
+    shell->commands_count = commands_count;
+    shell->builtins_count = _shell_builtins_count;
+    shell->storage = storage;
+    shell->flags = 0;
+    shell->command_ops.compare = cmdcmp;
+    shell->command_ops.get = shell_command_get;
 
-  // Sort the commands array
-  memcpy(shell->commands, commands, commands_count * sizeof(shell_command_t));
-  qsort(shell->commands, commands_count, sizeof(shell_command_t),
-      shell->command_ops.compare);
-
-  // Assign and, if required, sort the builtins array
-  shell->builtins = _shell_builtins;
-  if (!_shell_builtins_sorted) {
-    qsort(shell->builtins, shell->builtins_count, sizeof(shell_command_t),
+    // Sort the commands array
+    memcpy(shell->commands, commands, commands_count * sizeof(shell_command_t));
+    qsort(shell->commands, commands_count, sizeof(shell_command_t),
         shell->command_ops.compare);
-    _shell_builtins_sorted = 1;
-  }
 
-  return shell;
+    // Assign and, if required, sort the builtins array
+    shell->builtins = _shell_builtins;
+    if (!_shell_builtins_sorted) {
+      qsort(shell->builtins, shell->builtins_count, sizeof(shell_command_t),
+          shell->command_ops.compare);
+      _shell_builtins_sorted = 1;
+    }
+
+    return shell;
+  } while (0);
 
 
-handle_allocator_error:
+  // Error handler
   if (shell) {
     if (shell->prompt)   free(shell->prompt);
     if (shell->commands) free(shell->commands);
@@ -127,7 +127,7 @@ static int _execute(shell_t *shell, int argc, char *argv[]) {
 // Returns the code returned by the executed command, or 127 if the command
 // does not exist
 static int _shell_exec(shell_t *shell, char *_line) {
-  if (!shell->command_ops.get) return 0xFF; // TODO: Return something like SH_INTERNAL_ERROR
+  if (!shell->command_ops.get) return 0xFF;
 
   // argv-like buffer for the processed input line
   char *argv[SHELL_LINE_MAX_LEN / 2 + 1];
@@ -161,7 +161,7 @@ int shell_exec(shell_t *shell, const char *line) {
 
 // Execute a shell command, argv-style
 int shell_execv(shell_t *shell, char *argv[]) {
-  if (!shell || !argv) return 0xFF; // TODO: Return something like SH_INTERNAL_ERROR
+  if (!shell || !argv) return 0xFF;
   int argc = 0;
   while (argv[argc])
     ++argc;
@@ -197,6 +197,8 @@ void shell_loop(shell_t *shell, FILE *input) {
     // Attempt to execute command
     int ret = _shell_exec(shell, line);
     debug if (ret != 0) printf("Command returned error code %d\n", ret);
+    if (ret && shell_flag_get(shell, SH_EXIT_ON_ERR))
+      break;
 
     // Catch exit signal
     if (shell_flag_get(shell, SH_SIG_EXIT))
@@ -207,7 +209,7 @@ void shell_loop(shell_t *shell, FILE *input) {
   }
 
   // User exited, print the exit message and return
-  puts("\nSaluta Andonio");
+  puts("\nHappy to measure temperatures!");
 }
 
 
@@ -292,7 +294,6 @@ int _builtin_help(int argc, char *argv[], void *env) {
 
   // 'help' takes a command name as its sole argument
   else if (argc == 2) {
-    // TODO: Handle NULL function
     shell_command_t *cmd = sh->command_ops.get(sh, argv[1], CMD_TYPE_ALL);
     if (cmd) {
       if (cmd->help) puts(cmd->help);

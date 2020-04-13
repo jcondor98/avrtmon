@@ -1,19 +1,15 @@
 // AVR Temperature Monitor -- Paolo Lucchesi
-// AVR Command - config_set_field
-#include <stddef.h>  // NULL
-#include <avr/io.h>
-
+// AVR Command - start
+#include <stddef.h> // NULL
 #include "command.h"
-#include "config.h"
+#include "temperature_daemon.h"
 
-#define COMMAND_NAME cmd_config_set_field
-
+#define COMMAND_NAME cmd_start
 
 // Command starter
 static uint8_t _start(const void *arg) {
-  const config_setter_t *_arg = arg;
-  config_set(_arg->id, _arg->value);
-  config_save_field(_arg->id);
+  if (!temperature_daemon_ongoing())
+    temperature_daemon_start(1);
   return CMD_RET_FINISHED;
 }
 

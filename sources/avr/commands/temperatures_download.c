@@ -1,5 +1,5 @@
 // AVR Temperature Monitor -- Paolo Lucchesi
-// Command interface - Single command template
+// AVR Command - temperatures_download
 // The communication happens as follows:
 // 1] [HOST] <CMD> Request to download
 // 2] [AVR]  If next (or first) DB is not empty:

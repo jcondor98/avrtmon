@@ -27,23 +27,20 @@ void d21_callback(uint8_t pressed) {
 
 
 int main(int argc, const char *argv[]) {
-  uint8_t mcucr_old = MCUCR | (1 << JTD);
-  MCUCR = 1 << JTD;
-  MCUCR = 1 << JTD;
-  MCUCR = mcucr_old;
-
+  // Initialize modules
   serial_init();
-
   button_init(50);
 
+  // Setup buttons
+  button_action_set(D21, d21_callback);
   button_action_set(D52, d52_callback);
   button_action_set(D53, d53_callback);
+  button_enable(D21);
   button_enable(D52);
   button_enable(D53);
 
-  button_action_set(D21, d21_callback);
-  button_enable(D21);
-
   sei();
+
+  // Main application loop
   while (1) button_handler();
 }

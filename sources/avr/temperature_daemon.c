@@ -9,7 +9,6 @@
 #include "led.h"
 
 #define MIN_REGISTRATION_INTERVAL 50
-#define TEMPERATURE_REGISTERING_LED D24
 #define OCR_ONE_MSEC 15.625
 
 // Set/Clear timer interrupt flag (Use Timer 1)
@@ -36,8 +35,6 @@ ISR(TIMER1_COMPA_vect) {
 // Initialize the daemon (inlcuding related timer and LM sensor)
 void temperature_daemon_init(uint16_t tim_resolution, uint16_t tim_interval,
     uint8_t lm_adc_pin) {
-  if (tim_resolution * tim_interval < MIN_REGISTRATION_INTERVAL)
-    return;
   led_enable(TEMPERATURE_REGISTERING_LED);
 
   // Set the prescaler to 1024
@@ -57,7 +54,8 @@ void temperature_daemon_init(uint16_t tim_resolution, uint16_t tim_interval,
 // Start/Stop the daemon -- Button friendly (but 'pressed' will be ignored)
 void temperature_daemon_start(uint8_t pressed) {
   if (timer_ongoing ||
-      temperature_db_new(timer_resolution, timer_interval) != 0)
+      temperature_db_new(timer_resolution, timer_interval) != 0 ||
+      timer_resolution * timer_interval < MIN_REGISTRATION_INTERVAL)
     return;
 
   led_on(TEMPERATURE_REGISTERING_LED);
@@ -79,6 +77,16 @@ uint8_t temperature_daemon_ongoing(void) { return timer_ongoing; }
 // Get timer resolution/interval
 uint16_t temperature_daemon_get_resolution(void) { return timer_resolution; }
 uint16_t temperature_daemon_get_interval(void)   { return timer_interval; }
+
+// Set registering timer interval and resolution (until the next reboot)
+// Has no effect on an eventual currently ongoing registration session
+void temperature_daemon_set_resolution(uint16_t tres) {
+  if (tres) timer_resolution = tres;
+}
+
+void temperature_daemon_set_interval(uint16_t tint) {
+  if (tint) timer_interval = tint;
+}
 
 
 // Handle daemon "notifications", must be run periodically

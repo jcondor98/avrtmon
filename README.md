@@ -20,35 +20,58 @@ the temperature monitor a meaningful, effectively usable object.
 The AVR board is able, once connected to the PC via serial port, to:
 
 * Send to the PC operating system all the performed temperature registrations
-(deleting them from its internal NVM)
 * Receive commands (e.g. set a different registration rate, download data etc..)
 
 ### Installation
 The _GNU Make_ build system is used, and the codebase is in common for both
-host-side and AVR-side. For the AVR-side:
+host-side and AVR-side. Below, a list of _make_ recipes is given:
+
 ```
-# Compile and link the full ELF executable and pack it into a HEX firmware
+# Compile and link both the host-side and the (.elf) AVR-side executables
 make
 
-# 'make' and then flash the HEX firmware into the AVR microcontroller
-make flash
-```
-
-For the host-side, instead:
-```
-# Compile and link the full executable
+# Compile and link the host-side executable
 make host
 
-# Install the -ALREADY COMPILED- executable
+# Compile and link the avr-side .elf executable
+make avr
+
+# Install the -ALREADY COMPILED- host-side executable
 make install
 
-# Generate (requires pandoc) and install man page
+# 'make avr' and then flash the HEX firmware into the AVR microcontroller
+make flash
+
+# Generate (requires pandoc) man page
+make docs
+
+# Install man page (pregenerated in the repo)
 make install-docs
+
+# Generate the configuration-related source files from resources/config/default.csv
+make config-gen
 ```
 
 ### Testing
 The codebase is shipped with a test suite (based on an own-developed test framework).
-Standard tests are per
+Standard tests are performed with AVR-side parameters and executed at host-side.
+In fact, some tests are host/AVR-specific; AVR-specific tests consist in little
+programs that must be flashed into the AVR board.
+Below, a list of _make_ recipes to perform tests is given:
+
+```
+# Perform the entire standard tests suite:
+make test
+
+# Perform a single standard test unit
+make test-<unit>
+
+# Perform a single host-specific test unit
+make host-test-<unit>
+
+# Perform a single AVR-specific test unit
+make avr-test-<unit>
+```
 
 ### Terminology
 
@@ -96,11 +119,9 @@ DAT | 0x05 | Data (e.g. temperatures) sent from the tmon to the PC
 The redundant bits (most significant ones) of the type field are reserved for
 future use.
 
-The packet ID is not unique in an entire session, as the crucial thing is to
-avoid collisions of (i.e. distinguish) successive packets. 
-In fact, I suspect that everything would work if packet IDs were removed at all,
-but I think they make the code much more resilient to eventual modifications to
-the communication protocol (e.g. implementing a bulk receiving of packets).
+The packet ID could be not unique in an entire session; in fact, the crucial
+thing is to avoid collisions of (i.e. distinguish) successive packets, so this
+is not important at all.
 
 ### Acknowledgement and Error packets
 
@@ -120,8 +141,11 @@ The tmon configuration is stored at the beginning of its NVM, without any offset
 as a raw data structure. The default configuration is shipped with the program
 image, and flashed to the NVM with it.
 
-The configuration can be permanently changed using remote commands.
+In practice, configuration is a CSV file (without any header) organized in this fashion:
 
+```
+field-name,c-type,value
+```
 
 ## Commands
 
@@ -132,6 +156,10 @@ Command | Description
 :-:|:--
 CONFIG\_GET\_FIELD | Get a configuration field (value is transported in a DAT packet)
 CONFIG\_SET\_FIELD | Set a configuration field to an arbitrary value
-TEMPERATURES\_DOWNLOAD | Download all the temperatures (after that, the tmon DB will be reset)
+TMON\_START | Start registering temperatures
+TMON\_STOP | Stop registering temperatures
+TMON\_SET\_RESOLUTION _value_ | Set the timer resolution for the next DB until the tmon is reset
+TMON\_SET\_INTERVAL _value_ | Set the timer interval for the next DB until the tmon is reset
+TEMPERATURES\_DOWNLOAD | Download the temperatures DB
 TEMPERATURES\_RESET | Reset the temperatures DB
 ECHO | Echo a message back to the PC (developed mostly for debug purposes)

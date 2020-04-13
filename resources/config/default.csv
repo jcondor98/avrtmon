@@ -3,5 +3,5 @@ temperature_timer_interval,uint16_t,2
 lmsensor_pin,uint8_t,A0
 btn_debounce_time,uint8_t,20
 poweroff_pin,uint8_t,D21
-start_pin,uint8_t,D53
+start_pin,uint8_t,D50
 stop_pin,uint8_t,D52

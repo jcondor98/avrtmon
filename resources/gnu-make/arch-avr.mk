@@ -27,8 +27,8 @@ avrdude_write_flash = -U flash:w:$(strip $(1)):i
 avrdude_write_eeprom = -U eeprom:w:$(strip $(1)):i
 
 # LED preprocessor macros
-CFLAGS += -DPOWER_ON_LED=D22 -DTEMPERATURE_REGISTERING_LED=D24 \
-		  -DPOWER_ACT_LED=D26
+CFLAGS += -DPOWER_ON_LED=D22 -DPOWER_ACT_LED=D24 \
+  -DTEMPERATURE_REGISTERING_LED=D26
 
 
 %.eep:	%.elf

@@ -27,14 +27,21 @@ EOF
 
 function exit_error {
   usage
+  [ -n "$2" ] && echo "$2"
   exit $1
 }
 
 
 # Prepare command line arguments
-[ $# -le 1 ] && exit_error 1
+[ $# -le 1 ] && exit_error 1 "Too few arguments"
 OUTFILE="$1"
+[ -e "$OUTFILE" ] && exit_error 2 "Output file already exists"
 shift 2
+
+# If on GNU/Linux, automatically deduce type, else fallback to PDF
+command -v rev > /dev/null &&
+  OUTTYPE="$(basename $OUTFILE | rev | cut -d . -f 1 | rev)" ||
+  OUTTYPE=pdf
 
 # Generate graph
 ( echo 'digraph {'
@@ -48,4 +55,4 @@ shift 2
     fi
   done
   echo '}'
-) | dot -T pdf -o $OUTFILE
+) | dot -T "$OUTTYPE" -o "$OUTFILE"

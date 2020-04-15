@@ -8,7 +8,7 @@
 #include "packet.h"
 #include "ringbuffer.h"
 
-#define BAUD_RATE B57600
+#define BAUD_RATE B115200
 
 #if defined(DEBUG) && !defined(RX_BUF_SIZE)
 #define RX_BUF_SIZE 512

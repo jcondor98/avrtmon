@@ -11,10 +11,6 @@
 #define MIN_REGISTRATION_INTERVAL 50
 #define OCR_ONE_MSEC 15.625
 
-// Set/Clear timer interrupt flag (Use Timer 1)
-static inline void td_sei(void) { TIMSK1 |=  (1 << OCIE1A); }
-static inline void td_cli(void) { TIMSK1 &= ~(1 << OCIE1A); }
-
 
 // Timer variables
 static volatile uint16_t timer_counter;
@@ -23,6 +19,14 @@ static volatile uint8_t timer_elapsed;
 static uint16_t timer_resolution;
 static uint16_t timer_interval;
 
+
+// Start/Stop the daemon timer
+static inline void timd_stop(void) { TIMSK1 &= ~(1 << OCIE1A); }
+static inline void timd_start(void) {
+  OCR1A = (uint16_t)(OCR_ONE_MSEC * timer_resolution);
+  TCNT1 = 0;
+  TIMSK1 |=  (1 << OCIE1A);
+}
 
 // Timer ISR -- Timer 1 is used
 ISR(TIMER1_COMPA_vect) {
@@ -41,8 +45,6 @@ void temperature_daemon_init(uint16_t tim_resolution, uint16_t tim_interval,
   TCCR1A = 0;
   TCCR1B = (1 << WGM52) | (1 << CS50) | (1 << CS52);
 
-  // Set the OCR value to 'tim_resolution' milliseconds
-  OCR1A = (uint16_t)(OCR_ONE_MSEC * tim_resolution);
   timer_resolution = tim_resolution;
   timer_interval = tim_interval;
 
@@ -61,12 +63,12 @@ void temperature_daemon_start(uint8_t pressed) {
   led_on(TEMPERATURE_REGISTERING_LED);
   timer_counter = 0;
   timer_ongoing = 1;
-  td_sei();
+  timd_start();
 }
 
 
 void temperature_daemon_stop(uint8_t pressed) {
-  td_cli();
+  timd_stop();
   timer_ongoing = 0;
   led_off(TEMPERATURE_REGISTERING_LED);
 }

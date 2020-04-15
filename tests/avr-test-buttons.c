@@ -35,9 +35,9 @@ int main(int argc, const char *argv[]) {
   button_action_set(D21, d21_callback);
   button_action_set(D52, d52_callback);
   button_action_set(D53, d53_callback);
-  button_enable(D21);
-  button_enable(D52);
-  button_enable(D53);
+  button_enable(D21, BTN_VOLT_HIGH);
+  button_enable(D52, BTN_VOLT_HIGH);
+  button_enable(D53, BTN_VOLT_HIGH);
 
   sei();
 

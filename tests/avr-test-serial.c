@@ -12,7 +12,7 @@
 #define READY_MSG "Ready to receive\n"
 
 #define BUF_RX_SIZE 256
-volatile uint8_t buf_rx[BUF_RX_SIZE];
+uint8_t buf_rx[BUF_RX_SIZE];
 uint8_t buf_tx[1];
 
 

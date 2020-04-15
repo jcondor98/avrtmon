@@ -15,7 +15,7 @@ nvm_image_t NVMMEM _nvm_image = {
     .lmsensor_pin = A0,
     .btn_debounce_time = 20,
     .poweroff_pin = D21,
-    .start_pin = D53,
+    .start_pin = D50,
     .stop_pin = D52
   },
   .db_seq = (temperature_db_seq_t) { 0 }

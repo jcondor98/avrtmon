@@ -19,7 +19,7 @@ static inline uint8_t int0_flg(void) { return EIMSK & (1 << INT0  ); }
 // Set/Clear external interrupt and debouncer timer flags
 static inline void eint_sei(void) { PCIFR |= 1 << PCIF0; PCICR |= 1 << PCIE0; }
 static inline void int0_sei(void) { EIFR  |= 1 << INTF0; EIMSK |= 1 << INT0;  }
-static inline void tim4_sei(void) { TIMSK4 |=  (1 << OCIE4A); }
+static inline void tim4_sei(void) { TCNT4 = 0; TIMSK4 |=  (1 << OCIE4A); }
 static inline void eint_cli(void) { PCICR  &= ~(1 << PCIE0 ); }
 static inline void int0_cli(void) { EIMSK  &= ~(1 << INT0  ); }
 static inline void tim4_cli(void) { TIMSK4 &= ~(1 << OCIE4A); }

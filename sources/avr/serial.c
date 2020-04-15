@@ -36,6 +36,7 @@ void serial_init(void) {
       (uint8_t*) rx_buffer_raw, RX_BUFFER_SIZE);
 
   // Set baud rate
+  UCSR0A = (1 << U2X0); // Double speed transmission, no Multi-Process
   UBRR0H = (uint8_t) (UBRR_VALUE >> 8);
   UBRR0L = (uint8_t) UBRR_VALUE;
 

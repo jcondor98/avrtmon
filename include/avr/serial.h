@@ -4,9 +4,9 @@
 #define __SERIAL_MODULE_H
 #include <stdint.h>
 
-// USART Parameters
-#define BAUD_RATE 57600
-#define UBRR_VALUE (F_CPU / 16 / BAUD_RATE - 1)
+// USART Parameters - Divider equals 8 as U2X is enabled
+#define BAUD_RATE 115200
+#define UBRR_VALUE (F_CPU / 8 / BAUD_RATE - 1)
 
 // Transmission buffer size - Default is 64
 #ifndef TX_BUFFER_SIZE

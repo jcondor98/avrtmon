@@ -124,17 +124,15 @@ test-list:
 test-ringbuffer:
 	$(call host_test, $(SRCDIR)/avr/ringbuffer.c)
 
-test-meta:
-	$(call host_test)
-
 # Perform all tests in a stroke
 test:
-	@make -s test-crc
-	@make -s test-packet
-	@make -s test-config
-	@make -s test-temperature
-	@make -s test-ringbuffer
-	@make -s test-list
+	@ARCH=host make -s test-crc
+	@ARCH=host make -s test-packet
+	@ARCH=host make -s test-config
+	@ARCH=host make -s test-temperature
+	@ARCH=host make -s test-ringbuffer
+	@ARCH=host make -s host-test-ringbuffer
+	@ARCH=host make -s test-list
 
 
 clean:	

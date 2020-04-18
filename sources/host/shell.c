@@ -209,7 +209,8 @@ void shell_loop(shell_t *shell, FILE *input) {
   }
 
   // User exited, print the exit message and return
-  puts("\nHappy to measure temperatures!");
+  if (!shell_flag_get(shell, SH_SCRIPT_MODE))
+    puts("\nHappy to measure temperatures!");
 }
 
 

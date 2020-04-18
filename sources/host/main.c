@@ -48,6 +48,10 @@ int main(int argc, char *argv[]) {
         avr_dev_path = optarg;
         break;
 
+      case 's':
+        script_path = optarg;
+        break;
+
       case 'h':
         print_usage();
         exit(EXIT_SUCCESS);
@@ -105,6 +109,8 @@ int main(int argc, char *argv[]) {
   // Perform a clean exit from the program
   communication_cleanup();
   shell_cleanup(shell);
+  if (script_file)
+    fclose(script_file);
   shell_delete(shell);
 
   return 0;

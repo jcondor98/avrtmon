@@ -5,3 +5,4 @@ limbo/
 target/host/*
 target/avr/*
 resources/abstract
+presentation/

@@ -98,8 +98,10 @@ uint8_t packet_check_crc(const packet_t *p) {
 // Check the sanity of a packet header
 // Returns 0 if the packet is sane, 1 otherwise
 uint8_t packet_check_header(const packet_t *p) {
-  if (p && packet_get_size(p) >= PACKET_MIN_SIZE && (packet_brings_data(p) ||
-        packet_get_size(p) == PACKET_MIN_SIZE) && packet_header_parity(p) == 0)
+  const uint8_t size = packet_get_size(p);
+  if (p && size >= PACKET_MIN_SIZE && size <= PACKET_MAX_SIZE &&
+      (packet_brings_data(p) || size == PACKET_MIN_SIZE)
+      && packet_header_parity(p) == 0)
     return 0;
   return 1;
 }

@@ -108,7 +108,7 @@ header\_par |1 | (Even) Parity bit of the header
 The type of the packet can be one of the following:
 
 Type | Numeric Code | Description
---:|:-:|:-:|---
+--:|:-:|---
 HND | 0x00 | Handshake
 ACK | 0x01 | Acknowledgement
 ERR | 0x02 | Communication error (e.g. CRC mismatch)
